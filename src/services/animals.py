@@ -2,7 +2,7 @@ import random
 from datetime import datetime
 from typing import List, Optional
 from src.repositories.animals import Animals as AnimalsRepo
-from src.models.animal import Animal
+from src.models.animal import Animal, AnimalRequest
 from src.clients.cats import Cats as CatsClient
 
 class Animals:
@@ -16,14 +16,14 @@ class Animals:
     def get_animals_by_name(self, name: str) -> List[Animal]:
         return self.animals_repo.get_animal_by_name(name)
 
-    def create_animal(self, animal: dict, user: str) -> Animal:
+    def create_animal(self, animal: AnimalRequest, user: str) -> Animal:
         complete_animal_model = Animal(
             id=0, #temp
-            name=animal.get('name'),
-            age=animal.get('age'),
-            species=animal.get('species'),
-            breed=animal.get('breed'),
-            owner=animal.get('owner'),
+            name=animal.name,
+            age=animal.age,
+            species=animal.species,
+            breed=animal.breed,
+            owner=animal.owner,
             created_at=datetime.now(),
             created_by=user,
             updated_at=datetime.now(),

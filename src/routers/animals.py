@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, Response, Header
 from src.services.animals import Animals as AnimalsService
-from src.models.animal import Animal
+from src.models.animal import Animal, AnimalRequest
 
 class Animals:
     def __init__(self, animals_service: AnimalsService):
@@ -26,7 +26,7 @@ class Animals:
             return animals
 
         @self.router.post("/animals")
-        async def create_animal(animal: dict, user: str = Header(...)):
+        async def create_animal(animal: AnimalRequest, user: str = Header(...)):
             self.animals_service.create_animal(animal, user)
             return Response(status_code=200)
 

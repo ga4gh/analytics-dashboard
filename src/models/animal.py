@@ -18,3 +18,10 @@ class Animal(BaseModel):
     deleted_at: Optional[datetime] = None
     deleted_by: Optional[str] = None
     version: int
+
+class AnimalRequest(BaseModel):
+    name: str
+    age: int
+    species: str
+    breed: str
+    owner: Optional[str] = None
