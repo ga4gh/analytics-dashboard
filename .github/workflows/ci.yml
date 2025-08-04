@@ -62,8 +62,11 @@ jobs:
           path: bandit-report.json
           
       - name: Run safety (Dependency Security)
-        run: |
-          safety scan --output json --full-report > safety-report.json
+        uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}
+          output-format: json
+          args: --detailed-output --save-as safety-report.json
       
       - name: Upload safety report
         uses: actions/upload-artifact@v4
