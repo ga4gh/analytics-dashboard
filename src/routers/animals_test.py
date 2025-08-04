@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import Mock
-from fastapi.testclient import TestClient
+
+import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from src.models.animal import Animal, AnimalRequest
 from src.routers.animals import Animals
@@ -65,12 +66,12 @@ class TestGetAnimalById:
             mock_animals_service.get_animal_by_id.return_value = sample_animal
         else:
             mock_animals_service.get_animal_by_id.return_value = None
-        
+
         response = test_client.get(f"/animals/{animal_id}")
-        
+
         assert response.status_code == expected_status
         mock_animals_service.get_animal_by_id.assert_called_once_with(animal_id)
-        
+
         if expected_status == 200:
             assert response.json()["id"] == sample_animal.id
             assert response.json()["name"] == sample_animal.name
@@ -83,7 +84,7 @@ class TestGetAnimalById:
     ])
     def test_get_animal_by_id_service_exceptions(self, test_client, mock_animals_service, animal_id, service_exception):
         mock_animals_service.get_animal_by_id.side_effect = service_exception
-        
+
         with pytest.raises(type(service_exception)):
             test_client.get(f"/animals/{animal_id}")
 
@@ -100,12 +101,12 @@ class TestGetAnimalsByName:
             mock_animals_service.get_animals_by_name.return_value = animals
         else:
             mock_animals_service.get_animals_by_name.return_value = []
-        
+
         response = test_client.get(f"/animals/name/{name}")
-        
+
         assert response.status_code == expected_status
         mock_animals_service.get_animals_by_name.assert_called_once_with(name)
-        
+
         if expected_status == 200:
             assert len(response.json()) == animals_count
         else:

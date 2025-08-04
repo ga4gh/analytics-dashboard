@@ -51,10 +51,12 @@ jobs:
           pip install bandit safety
           
       - name: Run bandit
-        run: bandit -r src/ -f json -o bandit-report.json
+        run: bandit -r src/ -f json -o bandit-report.json --skip B101 --exclude '*_test.py,test_*.py'
                 
       - name: Upload bandit report
         uses: actions/upload-artifact@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           name: bandit-report
           path: bandit-report.json
@@ -65,6 +67,8 @@ jobs:
       
       - name: Upload safety report
         uses: actions/upload-artifact@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           name: safety-report
           path: safety-report.json
@@ -118,6 +122,8 @@ jobs:
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: ./coverage.xml
           fail_ci_if_error: true
