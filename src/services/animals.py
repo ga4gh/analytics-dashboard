@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from datetime import UTC, datetime
 
 from src.clients.cats import Cats as CatsClient
@@ -15,24 +14,6 @@ class Animals:
         return self.animals_repo.get_animal_by_id(animal_id)
 
     def get_animals_by_name(self, name: str) -> list[Animal]:
-=======
-import random
-from datetime import datetime
-from typing import List, Optional
-from src.repositories.animals import Animals as AnimalsRepo
-from src.models.animal import Animal, AnimalRequest
-from src.clients.cats import Cats as CatsClient
-
-class Animals:
-    def __init__(self, repo: AnimalsRepo, cats_client: CatsClient):
-        self.animals_repo = repo
-        self.cats_client = cats_client
-
-    def get_animal_by_id(self, animal_id: int) -> Optional[Animal]:
-        return self.animals_repo.get_animal_by_id(animal_id)
-
-    def get_animals_by_name(self, name: str) -> List[Animal]:
->>>>>>> origin/main
         return self.animals_repo.get_animal_by_name(name)
 
     def create_animal(self, animal: AnimalRequest, user: str) -> Animal:
@@ -43,15 +24,9 @@ class Animals:
             species=animal.species,
             breed=animal.breed,
             owner=animal.owner,
-<<<<<<< HEAD
             created_at=datetime.now(tz=UTC),
             created_by=user,
             updated_at=datetime.now(tz=UTC),
-=======
-            created_at=datetime.now(),
-            created_by=user,
-            updated_at=datetime.now(),
->>>>>>> origin/main
             updated_by=user,
             version=1
         )
