@@ -5,32 +5,19 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 
 locals {
-<<<<<<< HEAD
   vpc_cidr      = var.vpc_cidr # e.g. 10.0.0.0/16
   subnet_bits   = 4            # /16 + 4 = /20
-=======
-  vpc_cidr      = var.vpc_cidr            # e.g. 10.0.0.0/16
-  subnet_bits   = 4                       # /16 + 4 = /20
->>>>>>> origin/main
   public_count  = 3
   private_count = 3
 
   public_subnets = [
     for i in range(local.public_count) :
-<<<<<<< HEAD
     cidrsubnet(local.vpc_cidr, local.subnet_bits, i)
-=======
-      cidrsubnet(local.vpc_cidr, local.subnet_bits, i)
->>>>>>> origin/main
   ]
 
   private_subnets = [
     for i in range(local.private_count) :
-<<<<<<< HEAD
     cidrsubnet(local.vpc_cidr, local.subnet_bits, local.public_count + i)
-=======
-      cidrsubnet(local.vpc_cidr, local.subnet_bits, local.public_count + i)
->>>>>>> origin/main
   ]
 }
 
