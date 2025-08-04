@@ -1,55 +1,47 @@
 from src.models.animal import Animal
+
 from .setup import DatabaseConnection
+from .sqlbuilder import SQLBuilder
+
 
 class Animals:
-    def __init__(self, db: DatabaseConnection, table_name: str):
+    def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
         self.db = db
-        self.table_name = table_name
+        self.sql_builder = sql_builder
 
-    def create_animal(self, animal: Animal):
-        data = animal.model_dump(exclude={'id'})
-        columns = list(data.keys())
-        values = tuple(data.values())
-        placeholders = ', '.join(['%s'] * len(values))
+    def create_animal(self, animal: Animal) -> None:
+        data = animal.model_dump(exclude={"id"})
+        query, values = self.sql_builder.build_insert(data)
 
-        query = f"INSERT INTO animals ({', '.join(columns)}) VALUES ({placeholders})"
-
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
+        with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_animal(self, animal: Animal):
-        data = animal.model_dump(exclude={'id'})
-        set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
-        values = tuple(data.values()) + (animal.id,)
+    def update_animal(self, animal: Animal) -> None:
+        data = animal.model_dump(exclude={"id"})
+        query, values = self.sql_builder.build_update(data, animal.id, "id")
 
-        query = f"UPDATE animals SET {set_clauses} WHERE id = %s"
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
-                print("executing")
+        with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_animal_by_id(self, animal_id: int):
+    def get_animal_by_id(self, animal_id: int) -> Animal | None:
         query = "SELECT * FROM animals WHERE id = %s"
 
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
+        with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, (animal_id,))
                 row = cur.fetchone()
 
                 if row:
                     columns = [desc[0] for desc in cur.description]
-                    data = dict(zip(columns, row))
+                    data = dict(zip(columns, row, strict=False))
                     return Animal(**data)
                 return None
 
-    def get_animal_by_name(self, name: str):
+    def get_animal_by_name(self, name: str) -> list[Animal]:
         query = "SELECT * FROM animals WHERE name = %s"
 
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
+        with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, (name,))
                 rows = cur.fetchall()
 
@@ -57,7 +49,7 @@ class Animals:
                     columns = [desc[0] for desc in cur.description]
                     animals = []
                     for row in rows:
-                        data = dict(zip(columns, row))
+                        data = dict(zip(columns, row, strict=False))
                         animals.append(Animal(**data))
                     return animals
                 return []

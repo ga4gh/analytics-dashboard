@@ -1,4 +1,4 @@
-FROM python:3.13-bookworm as base
+FROM python:3.13-bookworm AS base
 
 # Fail fast if any command errors
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

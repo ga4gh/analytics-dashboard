@@ -1,29 +1,32 @@
 from contextlib import contextmanager
-from typing import Optional
+
+from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
+
 class DatabaseConnection:
-    def __init__(self, connection_url: str, min_size: int = 1, max_size: int = 10):
+    def __init__(self, connection_url: str, min_size: int = 1, max_size: int = 10) -> None:
         self.connection_url = connection_url
-        self.pool: Optional[ConnectionPool] = None
+        self.pool: ConnectionPool | None = None
         self.min_size = min_size
         self.max_size = max_size
 
-    def connect(self):
+    def connect(self) -> None:
         self.pool = ConnectionPool(
             conninfo=self.connection_url,
             min_size=self.min_size,
             max_size=self.max_size,
         )
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         if self.pool:
             self.pool.closeall()
 
     @contextmanager
-    def get_connection(self):
+    def get_connection(self) -> Connection:
         if not self.pool:
-            raise RuntimeError("Database not connected. Call connect() first.")
+            error_msg = "Database not connected. Call connect() first."
+            raise RuntimeError(error_msg)
 
         conn = self.pool.getconn()
         try:
