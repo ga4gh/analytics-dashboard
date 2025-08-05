@@ -31,6 +31,9 @@ jobs:
           
       - name: Run Ruff
         run: ruff check --output-format=github
+        
+      - name: Run mypy
+        run: mypy src/
 
   security:
     runs-on: ubuntu-latest
