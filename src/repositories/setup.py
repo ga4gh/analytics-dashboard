@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 from psycopg import Connection
@@ -20,10 +21,10 @@ class DatabaseConnection:
 
     def disconnect(self) -> None:
         if self.pool:
-            self.pool.closeall()
+            self.pool.close()
 
     @contextmanager
-    def get_connection(self) -> Connection:
+    def get_connection(self) -> Iterator[Connection]:
         if not self.pool:
             error_msg = "Database not connected. Call connect() first."
             raise RuntimeError(error_msg)

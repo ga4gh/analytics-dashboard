@@ -31,7 +31,7 @@ class Animals:
             version=1
         )
         self.animals_repo.create_animal(complete_animal_model)
-        return animal
+        return complete_animal_model
 
     def update_animal(self, animal_id: int, updates: dict, user: str) -> Animal | None:
         # Get existing animal
@@ -60,7 +60,7 @@ class Animals:
             self.animals_repo.create_animal(a)
 
     @staticmethod
-    def get_animals_for_breeds(breeds: list, user: str) -> list[Animal]:
+    def get_animals_for_breeds(breeds: dict, user: str) -> list[Animal]:
         animals = []
 
         for i, b in enumerate(breeds):

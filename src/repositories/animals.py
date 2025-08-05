@@ -32,7 +32,7 @@ class Animals:
                 cur.execute(query, (animal_id,))
                 row = cur.fetchone()
 
-                if row:
+                if row and cur.description:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row, strict=False))
                     return Animal(**data)
@@ -45,7 +45,7 @@ class Animals:
                 cur.execute(query, (name,))
                 rows = cur.fetchall()
 
-                if rows:
+                if rows and cur.description:
                     columns = [desc[0] for desc in cur.description]
                     animals = []
                     for row in rows:

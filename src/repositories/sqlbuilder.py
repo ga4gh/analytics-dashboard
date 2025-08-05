@@ -1,16 +1,18 @@
+from typing import Any
+
 from psycopg import sql
 
 
 class SQLBuilder:
     def __init__(self, table_name: str) -> None:
         self.table_name = table_name
-        self.allowed_fields = set()
+        self.allowed_fields: set[str] = set()
 
-    def allow_fields(self, fields: set) -> "SQLBuilder":
+    def allow_fields(self, fields: set[str]) -> "SQLBuilder":
         self.allowed_fields.update(fields)
         return self
 
-    def build_insert(self, data: dict[str, any]) -> tuple[sql.SQL, tuple]:
+    def build_insert(self, data: dict[str, Any]) -> tuple[sql.Composed, tuple]:
         # Validate fields
         unknown = set(data.keys()) - self.allowed_fields
         if unknown:
@@ -28,7 +30,7 @@ class SQLBuilder:
 
         return query, values
 
-    def build_update(self, data: dict[str, any], id_value: int, where_column: str = "id") -> tuple[sql.SQL, tuple]:
+    def build_update(self, data: dict[str, Any], id_value: int, where_column: str = "id") -> tuple[sql.Composed, tuple]:
         unknown = set(data.keys()) - self.allowed_fields
         if unknown:
             error_msg = f"Unknown fields: {unknown}"

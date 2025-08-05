@@ -8,3 +8,4 @@
 .coverage
 terraform.tfstate**
 flyway.config
+.mypy_cache
