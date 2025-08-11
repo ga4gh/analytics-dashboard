@@ -9,6 +9,11 @@ terraform {
       version = ">= 3.6"
     }
   }
+  backend "s3" {
+    bucket = "ga4gh-analytics-dashboard-terraform-state"
+    key    = "staging/rds.tfstate"
+    region = "us-east-2"
+  }
 
   required_version = ">= 1.3.0"
 }

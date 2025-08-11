@@ -1,6 +1,11 @@
 **/.DS_Store
 **/__pycache__
+**/.ruff_cache
+**/.pytest_cache
 .env
 .terraform
 .terraform.lock.hcl
+.coverage
 terraform.tfstate**
+flyway.config
+.mypy_cache
