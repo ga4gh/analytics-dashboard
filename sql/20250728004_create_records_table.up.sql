@@ -16,11 +16,6 @@ CREATE TABLE IF NOT EXISTS records (
 
 -- Create main table indexes
 
-CREATE INDEX IF NOT EXISTS idx_records_record_type ON records(record_type);
-CREATE INDEX IF NOT EXISTS idx_records_source ON records(source);
-CREATE INDEX IF NOT EXISTS idx_records_status ON records(status);
-CREATE INDEX IF NOT EXISTS idx_records_created_at ON records(created_at);
-CREATE INDEX IF NOT EXISTS idx_records_deleted_at ON records(deleted_at);
 
 -- Create Audit table
 
@@ -55,8 +50,6 @@ CREATE TABLE IF NOT EXISTS records_audit (
 
 -- Create audit table indexes
 
-CREATE INDEX IF NOT EXISTS idx_records_audit_records_id ON records_audit(record_id);
-CREATE INDEX IF NOT EXISTS idx_records_audit_action_tstamp ON records_audit(action_tstamp);
 
 -- Trigger function
 

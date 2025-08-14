@@ -6,7 +6,14 @@ CREATE TABLE repo_entity_actions (
     id BIGSERIAL PRIMARY KEY, 
     repo_id BIGINT REFERENCES github_repos(id), 
     action_type repo_action_type NOT NULL,
-    user_id BIGINT NOT NULL
+    user_id BIGINT NOT NULL,
+    created_by VARCHAR(64) NOT NULL,
+  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	updated_by VARCHAR(64) NOT NULL,
+  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	deleted_by VARCHAR(64),
+  	deleted_at TIMESTAMPTZ,
+  	version INTEGER NOT NULL
 );
 
 -- Audit table

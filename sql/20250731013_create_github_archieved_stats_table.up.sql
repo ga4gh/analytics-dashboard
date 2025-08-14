@@ -8,7 +8,14 @@ CREATE TABLE github_archieved_stats (
     daily_clone_count INT NOT NULL,
     daily_view_count INT NOT NULL,
     last_14_day_top_referral_sources JSONB[] NOT NULL,
-    last_14_day_top_referral_path JSONB[] NOT NULL
+    last_14_day_top_referral_path JSONB[] NOT NULL,
+    created_by VARCHAR(64) NOT NULL,
+  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	updated_by VARCHAR(64) NOT NULL,
+  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	deleted_by VARCHAR(64),
+  	deleted_at TIMESTAMPTZ,
+  	version INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_github_archieved_stats_repo_id ON github_archieved_stats(repo_id);

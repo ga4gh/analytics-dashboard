@@ -6,7 +6,14 @@ CREATE TABLE keywords (
     id BIGSERIAL PRIMARY KEY, 
     name VARCHAR NOT NULL, 
     acronym VARCHAR NOT NULL, 
-    source keyword_source
+    source keyword_source,
+    created_by VARCHAR(64) NOT NULL,
+  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	updated_by VARCHAR(64) NOT NULL,
+  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	deleted_by VARCHAR(64),
+  	deleted_at TIMESTAMPTZ,
+  	version INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_keywords_source ON keywords(source);

@@ -19,6 +19,13 @@ CREATE TABLE IF NOT EXISTS github_repos (
 	network_count INTEGER,
 	subscribers_count INTEGER,
 	branches_count INTEGER,
+	created_by VARCHAR(64) NOT NULL,
+  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	updated_by VARCHAR(64) NOT NULL,
+  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	deleted_by VARCHAR(64),
+  	deleted_at TIMESTAMPTZ,
+  	version INTEGER NOT NULL
 	CONSTRAINT fk_record
         FOREIGN KEY (record_id)
         REFERENCES records (id)

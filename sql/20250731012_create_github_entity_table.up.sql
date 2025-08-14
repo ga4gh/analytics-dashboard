@@ -9,7 +9,14 @@ CREATE TABLE github_entity (
     company VARCHAR NOT NULL, 
     email VARCHAR NOT NULL, 
     location VARCHAR, 
-    type github_entity_type NOT NULL
+    type github_entity_type NOT NULL,
+    created_by VARCHAR(64) NOT NULL,
+  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	updated_by VARCHAR(64) NOT NULL,
+  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  	deleted_by VARCHAR(64),
+  	deleted_at TIMESTAMPTZ,
+  	version INTEGER NOT NULL
 );
 
 -- Indexes
