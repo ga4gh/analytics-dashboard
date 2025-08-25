@@ -15,23 +15,23 @@ class Github:
 
         return response.json()
 
-    """ def get_gh_repo_entity(self):
-        url = f"{self.base_url}{constants.GH_REPO_ENTITY_ENDPOINT}"
+    def get_gh_repo_collaborators(self):
+        url = f"{self.base_url}{constants.GH_REPO_COLLABORATORS}"
         headers = {"x-api-key": self.api_key}
 
         response = requests.get(url, headers=headers, timeout=120)
         response.raise_for_status()
 
-        return response.json() """
-
-    """ def get_gh_repo_entity_actions(self):
-        url = f"{self.base_url}{constants.GH_REPO_ENTITY_ACTIONS_ENDPOINT}"
+        return response.json()
+    
+    def get_gh_repo_stargazers(self):
+        url = f"{self.base_url}{constants.GH_REPO_STARGAZERS}"
         headers = {"x-api-key": self.api_key}
 
         response = requests.get(url, headers=headers, timeout=120)
         response.raise_for_status()
 
-        return response.json() """
+        return response.json()
 
     def get_gh_weekly_commit(self):
         url = f"{self.base_url}{constants.GH_WEEKLY_COMMIT}"
