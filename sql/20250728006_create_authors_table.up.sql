@@ -22,10 +22,8 @@ CREATE TABLE IF NOT EXISTS authors (
 
 -- Create indexes on authors table
 
-CREATE INDEX IF NOT EXISTS idx_authors_article_id ON authors(article_id);
-CREATE INDEX IF NOT EXISTS idx_authors_article_type ON authors(article_type);
+CREATE INDEX IF NOT EXISTS idx_authors_name ON authors(name);
 CREATE INDEX IF NOT EXISTS idx_authors_is_primary ON authors(is_primary);
-CREATE INDEX IF NOT EXISTS idx_authors_deleted_at ON authors(deleted_at);
 
 -- Create authors audit table
 

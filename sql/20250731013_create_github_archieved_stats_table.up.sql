@@ -1,10 +1,10 @@
 -- Main table
 CREATE TABLE github_archieved_stats (
-    id UUID PRIMARY KEY,
-    repo_id UUID NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    repo_id BIGSERIAL NOT NULL,
     weekly_commit_add INT NOT NULL,
     weekly_commit_del INT NOT NULL,
-    yearly_commit_count INT[], -- Expected array length 52
+    yearly_commit_count INT[] NOT NULL, -- Expected array length 52
     daily_clone_count INT NOT NULL,
     daily_view_count INT NOT NULL,
     last_14_day_top_referral_sources JSONB[] NOT NULL,

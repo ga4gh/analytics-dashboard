@@ -6,19 +6,19 @@ CREATE TABLE IF NOT EXISTS github_repos (
 	name VARCHAR(128) NOT NULL,
 	repo_link VARCHAR(128) NOT NULL,
 	owner VARCHAR(128) NOT NULL,
-	description VARCHAR,
-	is_fork BOOLEAN,
-	last_updated TIMESTAMP,
-	pushed_at TIMESTAMP,
-	is_archived BOOLEAN,
-	license VARCHAR(64),
-	stargazers_counts INTEGER,
-	watchers_count INTEGER,
-	forks_count INTEGER,
-	open_issues_count INTEGER,
-	network_count INTEGER,
-	subscribers_count INTEGER,
-	branches_count INTEGER,
+	description VARCHAR NOT NULL,
+	is_fork BOOLEAN NOT NULL,
+	last_updated TIMESTAMP NOT NULL,
+	pushed_at TIMESTAMP NOT NULL,
+	is_archived BOOLEAN NOT NULL,
+	license VARCHAR(64) NOT NULL,
+	stargazers_counts INTEGER NOT NULL,
+	watchers_count INTEGER NOT NULL,
+	forks_count INTEGER NOT NULL,
+	open_issues_count INTEGER NOT NULL,
+	network_count INTEGER NOT NULL,
+	subscribers_count INTEGER NOT NULL,
+	branches_count INTEGER NOT NULL,
 	created_by VARCHAR(64) NOT NULL,
   	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   	updated_by VARCHAR(64) NOT NULL,
@@ -34,12 +34,10 @@ CREATE TABLE IF NOT EXISTS github_repos (
 
 -- Create indexes on main table
 
-CREATE INDEX IF NOT EXISTS idx_github_repos_record_id ON github_repos(record_id);
+CREATE INDEX IF NOT EXISTS idx_github_repos_name ON github_repos(name);
 CREATE INDEX IF NOT EXISTS idx_github_repos_owner ON github_repos(owner);
 CREATE INDEX IF NOT EXISTS idx_github_repos_is_archived ON github_repos(is_archived);
-CREATE INDEX IF NOT EXISTS idx_github_repos_license ON github_repos(license);
-CREATE INDEX IF NOT EXISTS idx_github_repos_last_updated ON github_repos(last_updated);
-CREATE INDEX IF NOT EXISTS idx_github_repos_pushed_at ON github_repos(pushed_at);
+CREATE INDEX IF NOT EXISTS idx_github_repos_is_fork ON github_repos(is_fork);
 
 -- Create audit table for github_repos
 

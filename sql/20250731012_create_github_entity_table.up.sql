@@ -6,8 +6,8 @@ CREATE TABLE github_entity (
     id UUID PRIMARY KEY, 
     name VARCHAR NOT NULL, 
     user_id VARCHAR NOT NULL, 
-    company VARCHAR NOT NULL, 
-    email VARCHAR NOT NULL, 
+    company VARCHAR, 
+    email VARCHAR, 
     location VARCHAR, 
     type github_entity_type NOT NULL,
     created_by VARCHAR(64) NOT NULL,
@@ -20,7 +20,6 @@ CREATE TABLE github_entity (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_github_entity_company ON github_entity(company);
 CREATE INDEX IF NOT EXISTS idx_github_entity_location ON github_entity(location);
 CREATE INDEX IF NOT EXISTS idx_github_entity_type ON github_entity(type);
 

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS articles (
     source_id VARCHAR NOT NULL,
     doi VARCHAR,
     status status NOT NULL,
-    publish_date TIMESTAMP NOT NULL,
+    publish_date TIMESTAMP,
     link VARCHAR NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS articles (
     updated_at TIMESTAMP NOT NULL,
     deleted_by VARCHAR(64),
     deleted_at TIMESTAMP,
-    version INTEGER,
+    version INTEGER NOT NULL,
     CONSTRAINT fk_record
         FOREIGN KEY (record_id)
         REFERENCES records (id)
@@ -24,11 +24,6 @@ CREATE TABLE IF NOT EXISTS articles (
 
 -- Create indexes on main table
 
-CREATE INDEX IF NOT EXISTS idx_articles_record_id ON articles(record_id);
-CREATE INDEX IF NOT EXISTS idx_articles_source_id ON articles(source_id);
-CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);
-CREATE INDEX IF NOT EXISTS idx_articles_publish_date ON articles(publish_date);
-CREATE INDEX IF NOT EXISTS idx_articles_deleted_at ON articles(deleted_at);
 
 -- Create audit table
 

@@ -4,14 +4,14 @@ CREATE TABLE IF NOT EXISTS pypi (
     id SERIAL PRIMARY KEY,
     record_id INTEGER NOT NULL,
     project_name VARCHAR(128) NOT NULL,
-    description VARCHAR,
-    download_history JSONB,
-    package_url VARCHAR(256),
-    project_url VARCHAR(256),
-    release_url VARCHAR(256),
-    tool_version VARCHAR(32),
-    latest_version BOOLEAN,
-    python_version VARCHAR(32),
+    description VARCHAR NOT NULL,
+    download_history JSONB NOT NULL,
+    package_url VARCHAR(256) NOT NULL,
+    project_url VARCHAR(256) NOT NULL,
+    release_url VARCHAR(256) NOT NULL,
+    tool_version VARCHAR(32) NOT NULL,
+    latest_version BOOLEAN NOT NULL,
+    python_version VARCHAR(32) NOT NULL,
     CONSTRAINT fk_record
         FOREIGN KEY (record_id)
         REFERENCES records (id)
@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS pypi (
 -- Create indexes on pypi table
 
 CREATE INDEX IF NOT EXISTS idx_pypi_project_name ON pypi(project_name);
+CREATE INDEX IF NOT EXISTS idx_pypi_python_version ON pypi(python_version);
 
 -- Create pypi audit table
 

@@ -1,7 +1,7 @@
 -- Create main table
 
 CREATE TABLE IF NOT EXISTS records (
-  	id SERIAL PRIMARY KEY,
+  	id BIGSERIAL PRIMARY KEY,
   	record_type record_type NOT NULL,
   	source source NOT NULL,
   	status status NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS records (
   	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   	deleted_by VARCHAR(64),
   	deleted_at TIMESTAMPTZ,
-  	version INTEGER
+  	version INTEGER NOT NULL
 );
 
 -- Create main table indexes

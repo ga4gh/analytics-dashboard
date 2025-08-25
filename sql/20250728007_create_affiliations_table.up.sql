@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS affiliations (
 
 -- Create indexes on affiliations table
 
-CREATE INDEX IF NOT EXISTS idx_affiliations_author_id ON affiliations(author_id);
 CREATE INDEX IF NOT EXISTS idx_affiliations_institute ON affiliations(institute);
 CREATE INDEX IF NOT EXISTS idx_affiliations_location ON affiliations(location);
 
