@@ -1,7 +1,7 @@
 import requests
 from src.config import constants
 
-class Github:
+class GithubRepo:
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -15,6 +15,11 @@ class Github:
 
         return response.json()
 
+class GithubEntity:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
+
     def get_gh_repo_collaborators(self):
         url = f"{self.base_url}{constants.GH_REPO_COLLABORATORS}"
         headers = {"x-api-key": self.api_key}
@@ -23,7 +28,12 @@ class Github:
         response.raise_for_status()
 
         return response.json()
-    
+
+class GithubEntityActions:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
+
     def get_gh_repo_stargazers(self):
         url = f"{self.base_url}{constants.GH_REPO_STARGAZERS}"
         headers = {"x-api-key": self.api_key}
@@ -32,6 +42,11 @@ class Github:
         response.raise_for_status()
 
         return response.json()
+
+class GithubArchievedStats:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
 
     def get_gh_weekly_commit(self):
         url = f"{self.base_url}{constants.GH_WEEKLY_COMMIT}"
