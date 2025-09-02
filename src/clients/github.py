@@ -1,7 +1,7 @@
 import requests
 from src.config import constants
 
-class GithubRepo:
+class GithubRepoClient:
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -15,7 +15,7 @@ class GithubRepo:
 
         return response.json()
 
-class GithubEntity:
+class GithubEntityClient:
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -29,7 +29,7 @@ class GithubEntity:
 
         return response.json()
 
-class GithubEntityActions:
+class GithubEntityActionsClient:
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -43,7 +43,7 @@ class GithubEntityActions:
 
         return response.json()
 
-class GithubArchievedStats:
+class GithubArchievedStatsClient:
     def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url
         self.api_key = api_key

@@ -1,4 +1,4 @@
-from src.models.github import GithubRepos, GithubEntity, GithubEntityActions, GithubArchievedStats
+from src.models.github import GithubRepo, GithubEntity, GithubEntityAction, GithubArchievedStat
 from .setup import DatabaseConnection
 
 class GithubRepo:
@@ -6,25 +6,25 @@ class GithubRepo:
         self.db = db
         self.table_name = table_name
 
-    def create_github_repo(self, githubRepo: GithubRepos):
+    def create_github_repo(self, githubRepo: GithubRepo):
         data = githubRepo.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO animals ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO github_repos ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_repo(self, githubRepo: GithubRepos):
+    def update_github_repo(self, githubRepo: GithubRepo):
         data = githubRepo.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubRepo.id,)
 
-        query = f"UPDATE animals SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE github_repos SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 print("executing")
@@ -32,7 +32,7 @@ class GithubRepo:
                 conn.commit()
 
     def get_github_repo_by_id(self, repo_id: int):
-        query = "SELECT * FROM animals WHERE id = %s"
+        query = "SELECT * FROM github_repos WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -42,11 +42,11 @@ class GithubRepo:
                 if row:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row))
-                    return Animal(**data)
+                    return GithubRepo(**data)
                 return None
 
     def get_github_repo_by_name(self, name: str):
-        query = "SELECT * FROM animals WHERE name = %s"
+        query = "SELECT * FROM github_repos WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -55,11 +55,11 @@ class GithubRepo:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    animals = []
+                    repos = []
                     for row in rows:
                         data = dict(zip(columns, row))
-                        animals.append(Animal(**data))
-                    return animals
+                        repos.append(GithubRepo(**data))
+                    return repos
                 return []
 
 
@@ -75,7 +75,7 @@ class GithubEntity:
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO animals ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO github_entity ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -87,7 +87,7 @@ class GithubEntity:
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubEntity.id,)
 
-        query = f"UPDATE animals SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE github_entity SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 print("executing")
@@ -95,7 +95,7 @@ class GithubEntity:
                 conn.commit()
 
     def get_github_entity_by_id(self, repo_id: int):
-        query = "SELECT * FROM animals WHERE id = %s"
+        query = "SELECT * FROM github_entity WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -105,11 +105,11 @@ class GithubEntity:
                 if row:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row))
-                    return Animal(**data)
+                    return GithubEntity(**data)
                 return None
 
     def get_github_entity_by_name(self, name: str):
-        query = "SELECT * FROM animals WHERE name = %s"
+        query = "SELECT * FROM github_entity WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -118,11 +118,11 @@ class GithubEntity:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    animals = []
+                    entity = []
                     for row in rows:
                         data = dict(zip(columns, row))
-                        animals.append(Animal(**data))
-                    return animals
+                        entity.append(GithubEntity(**data))
+                    return entity
                 return []
 
 class GithubEntityActions:
@@ -130,25 +130,25 @@ class GithubEntityActions:
         self.db = db
         self.table_name = table_name
 
-    def create_github_entity_actions(self, githubEntityActions: GithubEntityActions):
+    def create_github_entity_actions(self, githubEntityActions: GithubEntityAction):
         data = githubEntityActions.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO animals ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO github_entity_actions ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_entity_actions(self, githubEntityActions: GithubEntityActions):
+    def update_github_entity_actions(self, githubEntityActions: GithubEntityAction):
         data = githubEntityActions.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubEntityActions.id,)
 
-        query = f"UPDATE animals SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE github_entity_actions SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 print("executing")
@@ -156,7 +156,7 @@ class GithubEntityActions:
                 conn.commit()
 
     def get_github_entity_actions_by_id(self, repo_id: int):
-        query = "SELECT * FROM animals WHERE id = %s"
+        query = "SELECT * FROM github_entity_actions WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -166,11 +166,11 @@ class GithubEntityActions:
                 if row:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row))
-                    return Animal(**data)
+                    return GithubEntityAction(**data)
                 return None
 
     def get_github_entity_actions_by_name(self, name: str):
-        query = "SELECT * FROM animals WHERE name = %s"
+        query = "SELECT * FROM github_entity_actions WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -179,11 +179,11 @@ class GithubEntityActions:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    animals = []
+                    actions = []
                     for row in rows:
                         data = dict(zip(columns, row))
-                        animals.append(Animal(**data))
-                    return animals
+                        actions.append(GithubEntityAction(**data))
+                    return actions
                 return []
 
 class GithubArchievedStats:
@@ -191,33 +191,33 @@ class GithubArchievedStats:
         self.db = db
         self.table_name = table_name
 
-    def create_github_entity(self, githubArchievedStats: GithubArchievedStats):
+    def create_github_archieved_stats(self, githubArchievedStats: GithubArchievedStat):
         data = githubArchievedStats.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO animals ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO github_archieved_stats ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_entity(self, githubEntity: GithubEntity):
-        data = githubEntity.model_dump(exclude={'id'})
+    def update_github_archieved_stats(self, githubArchievedStat: GithubArchievedStat):
+        data = githubArchievedStat.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
-        values = tuple(data.values()) + (githubEntity.id,)
+        values = tuple(data.values()) + (githubArchievedStat.id,)
 
-        query = f"UPDATE animals SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE github_archieved_stats SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 print("executing")
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_github_entity_by_id(self, repo_id: int):
-        query = "SELECT * FROM animals WHERE id = %s"
+    def get_github_archieved_stats_by_id(self, repo_id: int):
+        query = "SELECT * FROM github_archieved_stats WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -227,11 +227,11 @@ class GithubArchievedStats:
                 if row:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row))
-                    return Animal(**data)
+                    return GithubArchievedStat(**data)
                 return None
 
-    def get_github_entity_by_name(self, name: str):
-        query = "SELECT * FROM animals WHERE name = %s"
+    def get_github_archieved_stats_by_name(self, name: str):
+        query = "SELECT * FROM github_archieved_stats WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -240,9 +240,9 @@ class GithubArchievedStats:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    animals = []
+                    stats = []
                     for row in rows:
                         data = dict(zip(columns, row))
-                        animals.append(Animal(**data))
-                    return animals
+                        stats.append(GithubArchievedStat(**data))
+                    return stats
                 return []
