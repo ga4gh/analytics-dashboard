@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS authors (
     name VARCHAR(64) NOT NULL,
     contact VARCHAR(64) NOT NULL,
     is_primary BOOLEAN NOT NULL,
-    article_type record_type NOT NULL,
+    article_type article_type NOT NULL,
     article_id INTEGER,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS authors (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_by VARCHAR(64),
     deleted_at TIMESTAMP,
-    version INTEGER,
+    version INTEGER NOT NULL,
     CONSTRAINT fk_article
         FOREIGN KEY (article_id)
         REFERENCES articles (id)
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS authors_audit (
     contact_after VARCHAR(64),
     is_primary_before BOOLEAN,
     is_primary_after BOOLEAN,
-    article_type_before record_type,
-    article_type_after record_type,
+    article_type_before article_type,
+    article_type_after article_type,
     article_id_before INTEGER,
     article_id_after INTEGER,
     created_by_before VARCHAR(64),

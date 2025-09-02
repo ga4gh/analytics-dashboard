@@ -5,6 +5,13 @@ CREATE TABLE IF NOT EXISTS affiliations (
     author_id INTEGER NOT NULL,
     institute VARCHAR(128) NOT NULL,
     location VARCHAR(128),
+    created_by VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_by VARCHAR(64) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_by VARCHAR(64),
+    deleted_at TIMESTAMP,
+    version INTEGER NOT NULL,
     CONSTRAINT fk_author
         FOREIGN KEY (author_id)
         REFERENCES authors (id)

@@ -15,7 +15,11 @@ CREATE TABLE github_archieved_stats (
   	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   	deleted_by VARCHAR(64),
   	deleted_at TIMESTAMPTZ,
-  	version INTEGER NOT NULL
+  	version INTEGER NOT NULL,
+    CONSTRAINT fk_repo
+        FOREIGN KEY (repo_id)
+        REFERENCES github_repos (id)
+        ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_github_archieved_stats_repo_id ON github_archieved_stats(repo_id);

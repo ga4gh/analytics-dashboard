@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS pypi (
     tool_version VARCHAR(32) NOT NULL,
     latest_version BOOLEAN NOT NULL,
     python_version VARCHAR(32) NOT NULL,
+    created_by VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_by VARCHAR(64) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_by VARCHAR(64),
+    deleted_at TIMESTAMP,
+    version INTEGER NOT NULL,
     CONSTRAINT fk_record
         FOREIGN KEY (record_id)
         REFERENCES records (id)
@@ -51,6 +58,20 @@ CREATE TABLE IF NOT EXISTS pypi_audit (
     latest_version_after BOOLEAN,
     python_version_before VARCHAR(32),
     python_version_after VARCHAR(32),
+    created_by_before VARCHAR(64),
+    created_by_after VARCHAR(64),
+    created_at_before TIMESTAMP,
+    created_at_after TIMESTAMP,
+    updated_by_before VARCHAR(64),
+    updated_by_after VARCHAR(64),
+    updated_at_before TIMESTAMP,
+    updated_at_after TIMESTAMP,
+    deleted_by_before VARCHAR(64),
+    deleted_by_after VARCHAR(64),
+    deleted_at_before TIMESTAMP,
+    deleted_at_after TIMESTAMP,
+    version_before INTEGER,
+    version_after INTEGER,
     UNIQUE(pypi_id,version_after)
 );
 

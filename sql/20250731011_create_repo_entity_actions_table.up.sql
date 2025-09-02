@@ -16,6 +16,9 @@ CREATE TABLE repo_entity_actions (
   	version INTEGER NOT NULL
 );
 
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_repo_entity_repo_id ON repo_entity_actions(repo_id);
+
 -- Audit table
 CREATE TABLE repo_entity_actions_audit (
     audit_id BIGSERIAL PRIMARY KEY,
