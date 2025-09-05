@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS pypi_versions (
     pypi_version VARCHAR(32) NOT NULL,
     python_version VARCHAR(32) NOT NULL,
     release_date TIMESTAMP,
-    downloads INTEGER,
+    download_url VARCHAR(256) NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_by VARCHAR(64) NOT NULL,
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS pypi_versions_audit (
     python_version_after VARCHAR(32),
     release_date_before TIMESTAMPTZ,
     release_date_after TIMESTAMPTZ,
-    downloads_before INTEGER,
-    downloads_after INTEGER,
+    download_url_before VARCHAR(256)
+    download_url_after VARCHAR(256)
     created_by_before VARCHAR(64),
     created_by_after VARCHAR(64),
     created_at_before TIMESTAMP,
@@ -76,10 +76,10 @@ BEGIN
         v_action_by := current_user;
         INSERT INTO pypi_versions_audit (
             action, action_by, pypi_versions_id, pypi_versions_pypi_version,
-            python_version_after, release_date_after, downloads_after
+            python_version_after, release_date_after, download_url_after
         ) VALUES (
             v_action, v_action_by, NEW.id, NEW.pypi_version,
-            NEW.python_version, NEW.release_date, NEW.downloads
+            NEW.python_version, NEW.release_date, NEW.download_url
         );
         RETURN NEW;
 
@@ -89,12 +89,12 @@ BEGIN
             action, action_by, pypi_versions_id, pypi_versions_pypi_version,
             python_version_before, python_version_after,
             release_date_before, release_date_after,
-            downloads_before, downloads_after
+            download_url_before, download_url_after
         ) VALUES (
             v_action, v_action_by, NEW.id, NEW.pypi_version,
             OLD.python_version, NEW.python_version,
             OLD.release_date, NEW.release_date,
-            OLD.downloads, NEW.downloads
+            OLD.download_url, NEW.download_url
         );
         RETURN NEW;
 
@@ -102,10 +102,10 @@ BEGIN
         v_action_by := current_user;
         INSERT INTO pypi_versions_audit (
             action, action_by, pypi_versions_id, pypi_versions_pypi_version,
-            python_version_before, release_date_before, downloads_before
+            python_version_before, release_date_before, download_url_before
         ) VALUES (
             v_action, v_action_by, OLD.id, OLD.pypi_version,
-            OLD.python_version, OLD.release_date, OLD.downloads
+            OLD.python_version, OLD.release_date, OLD.download_url
         );
         RETURN OLD;
     END IF;

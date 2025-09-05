@@ -9,8 +9,12 @@ CREATE TABLE IF NOT EXISTS pypi (
     package_url VARCHAR(256) NOT NULL,
     project_url VARCHAR(256) NOT NULL,
     release_url VARCHAR(256) NOT NULL,
-    tool_version VARCHAR(32) NOT NULL,
+    github_url VARCHAR(256),
+    author_name VARCHAR(256),
+    author_email VARCHAR(128),
+    package_version VARCHAR(32) NOT NULL,
     latest_version BOOLEAN NOT NULL,
+    release_date TIMESTAMP NOT NULL,
     python_version VARCHAR(32) NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -52,10 +56,18 @@ CREATE TABLE IF NOT EXISTS pypi_audit (
     project_url_after VARCHAR(256),
     release_url_before VARCHAR(256),
     release_url_after VARCHAR(256),
-    tool_version_before VARCHAR(32),
-    tool_version_after VARCHAR(32),
+    github_url_before VARCHAR(256),
+    github_url_after VARCHAR(256),
+    author_name_before VARCHAR(256),
+    author_name_after VARCHAR(256),
+    author_email_before VARCHAR(128),
+    author_email_after VARCHAR(128),
+    package_version_before VARCHAR(32),
+    package_version_after VARCHAR(32),
     latest_version_before BOOLEAN,
     latest_version_after BOOLEAN,
+    release_date_before TIMESTAMP,
+    release_date_after TIMESTAMP,
     python_version_before VARCHAR(32),
     python_version_after VARCHAR(32),
     created_by_before VARCHAR(64),
@@ -101,8 +113,12 @@ BEGIN
             package_url_after,
             project_url_after,
             release_url_after,
-            tool_version_after,
+            github_url_after,
+            author_name_after,
+            author_email_after,
+            package_version_after,
             latest_version_after,
+            release_date_after,
             python_version_after
         ) VALUES (
             v_action, v_action_by, NEW.id,
@@ -113,8 +129,12 @@ BEGIN
             NEW.package_url,
             NEW.project_url,
             NEW.release_url,
-            NEW.tool_version,
+            NEW.github_url,
+            NEW.author_name,
+            NEW.author_email,
+            NEW.package_version,
             NEW.latest_version,
+            NEW.release_date,
             NEW.python_version
         );
         RETURN NEW;
@@ -130,9 +150,13 @@ BEGIN
             package_url_before, package_url_after,
             project_url_before, project_url_after,
             release_url_before, release_url_after,
-            tool_version_before, tool_version_after,
+            github_url_before, github_url_after,
+            author_name_before, author_name_after,
+            author_email_before, author_email_after,
+            package_version_before, package_version_after,
             latest_version_before, latest_version_after,
-            python_version_before, python_version_after
+            release_date_before, release_date_after,
+            python_version_before, python_version_after555
         ) VALUES (
             v_action, v_action_by, NEW.id,
             OLD.record_id, NEW.record_id,
@@ -142,8 +166,12 @@ BEGIN
             OLD.package_url, NEW.package_url,
             OLD.project_url, NEW.project_url,
             OLD.release_url, NEW.release_url,
-            OLD.tool_version, NEW.tool_version,
+            OLD.github_url, NEW.github_url,
+            OLD.author_name, NEW.author_name,
+            OLD.author_email, NEW.author_email,
+            OLD.package_version, NEW.package_version,
             OLD.latest_version, NEW.latest_version,
+            OLD.release_date, NEW.release_date,
             OLD.python_version, NEW.python_version
         );
         RETURN NEW;
@@ -159,8 +187,12 @@ BEGIN
             package_url_before,
             project_url_before,
             release_url_before,
-            tool_version_before,
+            github_url_before,
+            author_name_before,
+            author_email_before,
+            package_version_before,
             latest_version_before,
+            release_date_before,
             python_version_before
         ) VALUES (
             v_action, v_action_by, OLD.id,
@@ -171,8 +203,12 @@ BEGIN
             OLD.package_url,
             OLD.project_url,
             OLD.release_url,
-            OLD.tool_version,
+            OLD.github_url,
+            OLD.author_name,
+            OLD.author_email,
+            OLD.package_version,
             OLD.latest_version,
+            OLD.release_date,
             OLD.python_version
         );
         RETURN OLD;
