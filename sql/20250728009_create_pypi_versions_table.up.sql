@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS pypi_versions (
     deleted_by VARCHAR(64),
     deleted_at TIMESTAMP,
     version INTEGER NOT NULL,
-    PRIMARY KEY (id, pypi_version),
+    PRIMARY KEY (id, package_version),
     CONSTRAINT fk_pypi
         FOREIGN KEY (id)
         REFERENCES pypi (id)
