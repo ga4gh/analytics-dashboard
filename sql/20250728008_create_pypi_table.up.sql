@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS pypi (
     author_name VARCHAR(256),
     author_email VARCHAR(128),
     package_version VARCHAR(32) NOT NULL,
-    latest_version BOOLEAN NOT NULL,
+    is_latest BOOLEAN NOT NULL,
     release_date TIMESTAMP NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS pypi_audit (
     author_email_after VARCHAR(128),
     package_version_before VARCHAR(32),
     package_version_after VARCHAR(32),
-    latest_version_before BOOLEAN,
-    latest_version_after BOOLEAN,
+    is_latest_before BOOLEAN,
+    is_latest_after BOOLEAN,
     release_date_before TIMESTAMP,
     release_date_after TIMESTAMP,
     created_by_before VARCHAR(64),
@@ -114,7 +114,7 @@ BEGIN
             author_name_after,
             author_email_after,
             package_version_after,
-            latest_version_after,
+            is_latest_after,
             release_date_after
         ) VALUES (
             v_action, v_action_by, NEW.id,
@@ -129,7 +129,7 @@ BEGIN
             NEW.author_name,
             NEW.author_email,
             NEW.package_version,
-            NEW.latest_version,
+            NEW.is_latest,
             NEW.release_date
         );
         RETURN NEW;
@@ -149,7 +149,7 @@ BEGIN
             author_name_before, author_name_after,
             author_email_before, author_email_after,
             package_version_before, package_version_after,
-            latest_version_before, latest_version_after,
+            is_latest_before, is_latest_after,
             release_date_before, release_date_after,
         ) VALUES (
             v_action, v_action_by, NEW.id,
@@ -164,7 +164,7 @@ BEGIN
             OLD.author_name, NEW.author_name,
             OLD.author_email, NEW.author_email,
             OLD.package_version, NEW.package_version,
-            OLD.latest_version, NEW.latest_version,
+            OLD.is_latest, NEW.is_latest,
             OLD.release_date, NEW.release_date,
         );
         RETURN NEW;
@@ -184,7 +184,7 @@ BEGIN
             author_name_before,
             author_email_before,
             package_version_before,
-            latest_version_before,
+            is_latest_before,
             release_date_before
         ) VALUES (
             v_action, v_action_by, OLD.id,
@@ -199,7 +199,7 @@ BEGIN
             OLD.author_name,
             OLD.author_email,
             OLD.package_version,
-            OLD.latest_version,
+            OLD.is_latest,
             OLD.release_date
         );
         RETURN OLD;
