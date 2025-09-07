@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS pypi (
     record_id INTEGER NOT NULL,
     project_name VARCHAR(128) NOT NULL,
     description VARCHAR NOT NULL,
-    download_history JSONB NOT NULL,
+    download_history JSONB,
     package_url VARCHAR(256) NOT NULL,
     project_url VARCHAR(256) NOT NULL,
     release_url VARCHAR(256) NOT NULL,
@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS pypi (
     package_version VARCHAR(32) NOT NULL,
     latest_version BOOLEAN NOT NULL,
     release_date TIMESTAMP NOT NULL,
-    python_version VARCHAR(32) NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_by VARCHAR(64) NOT NULL,
@@ -68,8 +67,6 @@ CREATE TABLE IF NOT EXISTS pypi_audit (
     latest_version_after BOOLEAN,
     release_date_before TIMESTAMP,
     release_date_after TIMESTAMP,
-    python_version_before VARCHAR(32),
-    python_version_after VARCHAR(32),
     created_by_before VARCHAR(64),
     created_by_after VARCHAR(64),
     created_at_before TIMESTAMP,
@@ -118,8 +115,7 @@ BEGIN
             author_email_after,
             package_version_after,
             latest_version_after,
-            release_date_after,
-            python_version_after
+            release_date_after
         ) VALUES (
             v_action, v_action_by, NEW.id,
             NEW.record_id,
@@ -134,8 +130,7 @@ BEGIN
             NEW.author_email,
             NEW.package_version,
             NEW.latest_version,
-            NEW.release_date,
-            NEW.python_version
+            NEW.release_date
         );
         RETURN NEW;
 
@@ -156,7 +151,6 @@ BEGIN
             package_version_before, package_version_after,
             latest_version_before, latest_version_after,
             release_date_before, release_date_after,
-            python_version_before, python_version_after555
         ) VALUES (
             v_action, v_action_by, NEW.id,
             OLD.record_id, NEW.record_id,
@@ -172,7 +166,6 @@ BEGIN
             OLD.package_version, NEW.package_version,
             OLD.latest_version, NEW.latest_version,
             OLD.release_date, NEW.release_date,
-            OLD.python_version, NEW.python_version
         );
         RETURN NEW;
 
@@ -192,8 +185,7 @@ BEGIN
             author_email_before,
             package_version_before,
             latest_version_before,
-            release_date_before,
-            python_version_before
+            release_date_before
         ) VALUES (
             v_action, v_action_by, OLD.id,
             OLD.record_id,
@@ -208,8 +200,7 @@ BEGIN
             OLD.author_email,
             OLD.package_version,
             OLD.latest_version,
-            OLD.release_date,
-            OLD.python_version
+            OLD.release_date
         );
         RETURN OLD;
     END IF;

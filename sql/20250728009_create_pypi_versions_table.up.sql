@@ -2,7 +2,6 @@
 
 CREATE TABLE IF NOT EXISTS pypi_versions (
     id INTEGER NOT NULL,
-    pypi_version VARCHAR(32) NOT NULL,
     python_version VARCHAR(32) NOT NULL,
     release_date TIMESTAMP,
     download_url VARCHAR(256) NOT NULL,
@@ -33,7 +32,6 @@ CREATE TABLE IF NOT EXISTS pypi_versions_audit (
     action TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
     action_by VARCHAR(64),
     pypi_versions_id INTEGER NOT NULL,
-    pypi_versions_pypi_version VARCHAR(32) NOT NULL,
     python_version_before VARCHAR(32),
     python_version_after VARCHAR(32),
     release_date_before TIMESTAMPTZ,
@@ -75,10 +73,10 @@ BEGIN
     IF v_action = 'INSERT' THEN
         v_action_by := current_user;
         INSERT INTO pypi_versions_audit (
-            action, action_by, pypi_versions_id, pypi_versions_pypi_version,
+            action, action_by, pypi_versions_id,
             python_version_after, release_date_after, download_url_after
         ) VALUES (
-            v_action, v_action_by, NEW.id, NEW.pypi_version,
+            v_action, v_action_by, NEW.id,
             NEW.python_version, NEW.release_date, NEW.download_url
         );
         RETURN NEW;
@@ -86,12 +84,12 @@ BEGIN
     ELSIF v_action = 'UPDATE' THEN
         v_action_by := current_user;
         INSERT INTO pypi_versions_audit (
-            action, action_by, pypi_versions_id, pypi_versions_pypi_version,
+            action, action_by, pypi_versions_id,
             python_version_before, python_version_after,
             release_date_before, release_date_after,
             download_url_before, download_url_after
         ) VALUES (
-            v_action, v_action_by, NEW.id, NEW.pypi_version,
+            v_action, v_action_by, NEW.id,
             OLD.python_version, NEW.python_version,
             OLD.release_date, NEW.release_date,
             OLD.download_url, NEW.download_url
@@ -101,10 +99,10 @@ BEGIN
     ELSIF v_action = 'DELETE' THEN
         v_action_by := current_user;
         INSERT INTO pypi_versions_audit (
-            action, action_by, pypi_versions_id, pypi_versions_pypi_version,
+            action, action_by, pypi_versions_id,
             python_version_before, release_date_before, download_url_before
         ) VALUES (
-            v_action, v_action_by, OLD.id, OLD.pypi_version,
+            v_action, v_action_by, OLD.id,
             OLD.python_version, OLD.release_date, OLD.download_url
         );
         RETURN OLD;
