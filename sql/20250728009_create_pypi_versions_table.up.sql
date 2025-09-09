@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS pypi_versions_audit (
     package_version_after VARCHAR(32),
     release_date_before TIMESTAMPTZ,
     release_date_after TIMESTAMPTZ,
-    download_url_before VARCHAR(256)
-    download_url_after VARCHAR(256)
+    download_url_before VARCHAR(256),
+    download_url_after VARCHAR(256),
     created_by_before VARCHAR(64),
     created_by_after VARCHAR(64),
     created_at_before TIMESTAMP,
