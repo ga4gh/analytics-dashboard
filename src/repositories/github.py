@@ -1,38 +1,43 @@
-from src.models.github import GithubRepo, GithubEntity, GithubEntityAction, GithubArchievedStat
+from src.models.github import (
+    GithubRepo as GhRepoModel,
+    GithubEntity as GhEntityModel,
+    GithubEntityAction as GhEntityActionModel,
+    GithubArchievedStat as GhArchievedStatModel
+)
 from .setup import DatabaseConnection
 
+
 class GithubRepo:
-    def __init__(self, db: DatabaseConnection, table_name: str):
+    def __init__(self, db: DatabaseConnection, table_name: str = "github_repos"):
         self.db = db
         self.table_name = table_name
 
-    def create_github_repo(self, githubRepo: GithubRepo):
+    def create_repo(self, githubRepo: GhRepoModel):
         data = githubRepo.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO github_repos ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_repo(self, githubRepo: GithubRepo):
+    def update_repo(self, githubRepo: GhRepoModel):
         data = githubRepo.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubRepo.id,)
 
-        query = f"UPDATE github_repos SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE {self.table_name} SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                print("executing")
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_github_repo_by_id(self, repo_id: int):
-        query = "SELECT * FROM github_repos WHERE id = %s"
+    def get_repo_by_id(self, repo_id: int):
+        query = f"SELECT * FROM {self.table_name} WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -41,12 +46,11 @@ class GithubRepo:
 
                 if row:
                     columns = [desc[0] for desc in cur.description]
-                    data = dict(zip(columns, row))
-                    return GithubRepo(**data)
+                    return GhRepoModel(**dict(zip(columns, row)))
                 return None
 
-    def get_github_repo_by_name(self, name: str):
-        query = "SELECT * FROM github_repos WHERE name = %s"
+    def get_repo_by_name(self, name: str):
+        query = f"SELECT * FROM {self.table_name} WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -55,61 +59,54 @@ class GithubRepo:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    repos = []
-                    for row in rows:
-                        data = dict(zip(columns, row))
-                        repos.append(GithubRepo(**data))
-                    return repos
+                    return [GhRepoModel(**dict(zip(columns, row))) for row in rows]
                 return []
 
 
-
-class GithubEntity:
-    def __init__(self, db: DatabaseConnection, table_name: str):
+class GithubEntities:
+    def __init__(self, db: DatabaseConnection, table_name: str = "github_entities"):
         self.db = db
         self.table_name = table_name
 
-    def create_github_entity(self, githubEntity: GithubEntity):
+    def create_entity(self, githubEntity: GhEntityModel):
         data = githubEntity.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO github_entity ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_entity(self, githubEntity: GithubEntity):
+    def update_entity(self, githubEntity: GhEntityModel):
         data = githubEntity.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubEntity.id,)
 
-        query = f"UPDATE github_entity SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE {self.table_name} SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                print("executing")
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_github_entity_by_id(self, repo_id: int):
-        query = "SELECT * FROM github_entity WHERE id = %s"
+    def get_entity_by_id(self, entity_id: int):
+        query = f"SELECT * FROM {self.table_name} WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (repo_id,))
+                cur.execute(query, (entity_id,))
                 row = cur.fetchone()
 
                 if row:
                     columns = [desc[0] for desc in cur.description]
-                    data = dict(zip(columns, row))
-                    return GithubEntity(**data)
+                    return GhEntityModel(**dict(zip(columns, row)))
                 return None
 
-    def get_github_entity_by_name(self, name: str):
-        query = "SELECT * FROM github_entity WHERE name = %s"
+    def get_entity_by_name(self, name: str):
+        query = f"SELECT * FROM {self.table_name} WHERE name = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
@@ -118,131 +115,91 @@ class GithubEntity:
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    entity = []
-                    for row in rows:
-                        data = dict(zip(columns, row))
-                        entity.append(GithubEntity(**data))
-                    return entity
+                    return [GhEntityModel(**dict(zip(columns, row))) for row in rows]
                 return []
 
+
 class GithubEntityActions:
-    def __init__(self, db: DatabaseConnection, table_name: str):
+    def __init__(self, db: DatabaseConnection, table_name: str = "github_entity_actions"):
         self.db = db
         self.table_name = table_name
 
-    def create_github_entity_actions(self, githubEntityActions: GithubEntityAction):
-        data = githubEntityActions.model_dump(exclude={'id'})
+    def create_action(self, githubEntityAction: GhEntityActionModel):
+        data = githubEntityAction.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO github_entity_actions ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_entity_actions(self, githubEntityActions: GithubEntityAction):
-        data = githubEntityActions.model_dump(exclude={'id'})
+    def update_action(self, githubEntityAction: GhEntityActionModel):
+        data = githubEntityAction.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
-        values = tuple(data.values()) + (githubEntityActions.id,)
+        values = tuple(data.values()) + (githubEntityAction.id,)
 
-        query = f"UPDATE github_entity_actions SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE {self.table_name} SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                print("executing")
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_github_entity_actions_by_id(self, repo_id: int):
-        query = "SELECT * FROM github_entity_actions WHERE id = %s"
+    def get_action_by_id(self, action_id: int):
+        query = f"SELECT * FROM {self.table_name} WHERE id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (repo_id,))
+                cur.execute(query, (action_id,))
                 row = cur.fetchone()
 
                 if row:
                     columns = [desc[0] for desc in cur.description]
-                    data = dict(zip(columns, row))
-                    return GithubEntityAction(**data)
+                    return GhEntityActionModel(**dict(zip(columns, row)))
                 return None
 
-    def get_github_entity_actions_by_name(self, name: str):
-        query = "SELECT * FROM github_entity_actions WHERE name = %s"
-
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (name,))
-                rows = cur.fetchall()
-
-                if rows:
-                    columns = [desc[0] for desc in cur.description]
-                    actions = []
-                    for row in rows:
-                        data = dict(zip(columns, row))
-                        actions.append(GithubEntityAction(**data))
-                    return actions
-                return []
 
 class GithubArchievedStats:
-    def __init__(self, db: DatabaseConnection, table_name: str):
+    def __init__(self, db: DatabaseConnection, table_name: str = "github_archieved_stats"):
         self.db = db
         self.table_name = table_name
 
-    def create_github_archieved_stats(self, githubArchievedStats: GithubArchievedStat):
+    def create_stats(self, githubArchievedStats: GhArchievedStatModel):
         data = githubArchievedStats.model_dump(exclude={'id'})
         columns = list(data.keys())
         values = tuple(data.values())
         placeholders = ', '.join(['%s'] * len(values))
 
-        query = f"INSERT INTO github_archieved_stats ({', '.join(columns)}) VALUES ({placeholders})"
+        query = f"INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_github_archieved_stats(self, githubArchievedStat: GithubArchievedStat):
+    def update_stats(self, githubArchievedStat: GhArchievedStatModel):
         data = githubArchievedStat.model_dump(exclude={'id'})
         set_clauses = ', '.join([f"{col} = %s" for col in data.keys()])
         values = tuple(data.values()) + (githubArchievedStat.id,)
 
-        query = f"UPDATE github_archieved_stats SET {set_clauses} WHERE id = %s"
+        query = f"UPDATE {self.table_name} SET {set_clauses} WHERE id = %s"
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
-                print("executing")
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_github_archieved_stats_by_id(self, repo_id: int):
-        query = "SELECT * FROM github_archieved_stats WHERE id = %s"
+    def get_stats_by_repo_id(self, repo_id: str):
+        query = f"SELECT * FROM {self.table_name} WHERE repo_id = %s"
 
         with self.db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (repo_id,))
-                row = cur.fetchone()
-
-                if row:
-                    columns = [desc[0] for desc in cur.description]
-                    data = dict(zip(columns, row))
-                    return GithubArchievedStat(**data)
-                return None
-
-    def get_github_archieved_stats_by_name(self, name: str):
-        query = "SELECT * FROM github_archieved_stats WHERE name = %s"
-
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (name,))
                 rows = cur.fetchall()
 
                 if rows:
                     columns = [desc[0] for desc in cur.description]
-                    stats = []
-                    for row in rows:
-                        data = dict(zip(columns, row))
-                        stats.append(GithubArchievedStat(**data))
-                    return stats
+                    return [GhArchievedStatModel(**dict(zip(columns, row))) for row in rows]
                 return []
