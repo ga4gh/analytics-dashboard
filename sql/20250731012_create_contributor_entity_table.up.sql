@@ -1,15 +1,15 @@
 -- Create ENUM type
-CREATE TYPE github_entity_type AS ENUM ('user', 'bot');
+CREATE TYPE contributor_entity_type AS ENUM ('user', 'bot');
 
 -- Main table
-CREATE TABLE github_entity (
+CREATE TABLE contributor_entity (
     id UUID PRIMARY KEY, 
     name VARCHAR NOT NULL, 
     user_id VARCHAR NOT NULL, 
     company VARCHAR, 
     email VARCHAR, 
     location VARCHAR, 
-    type github_entity_type NOT NULL,
+    type contributor_entity_type NOT NULL,
     created_by VARCHAR(64) NOT NULL,
   	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   	updated_by VARCHAR(64) NOT NULL,
@@ -20,16 +20,16 @@ CREATE TABLE github_entity (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_github_entity_location ON github_entity(location);
-CREATE INDEX IF NOT EXISTS idx_github_entity_type ON github_entity(type);
+CREATE INDEX IF NOT EXISTS idx_contributor_entity_location ON contributor_entity(location);
+CREATE INDEX IF NOT EXISTS idx_contributor_entity_type ON contributor_entity(type);
 
 -- Audit table
-CREATE TABLE github_entity_audit (
+CREATE TABLE contributor_entity_audit (
     audit_id BIGSERIAL PRIMARY KEY,
     action_tstamp TIMESTAMPTZ NOT NULL DEFAULT now(),
     action TEXT NOT NULL CHECK (action IN ('INSERT','UPDATE','DELETE')),
     action_by TEXT,
-    github_entity_id INTEGER,
+    contributor_entity_id INTEGER,
     name_before            VARCHAR NOT NULL, 
     name_after             VARCHAR NOT NULL, 
     user_id_before         VARCHAR NOT NULL, 
@@ -40,8 +40,8 @@ CREATE TABLE github_entity_audit (
     email_after            VARCHAR NOT NULL, 
     location_before        VARCHAR,
     location_after         VARCHAR,  
-    type_before            github_entity_type NOT NULL,
-    type_after             github_entity_type NOT NULL,
+    type_before            contributor_entity_type NOT NULL,
+    type_after             contributor_entity_type NOT NULL,
     updated_at_before      TIMESTAMPTZ,
     updated_at_after       TIMESTAMPTZ,
     updated_by_before      VARCHAR,
@@ -53,11 +53,11 @@ CREATE TABLE github_entity_audit (
     version_before         INT,
     version_after          INT,
 
-    UNIQUE(github_entity_id, version_after)
+    UNIQUE(contributor_entity_id, version_after)
 );
 
 -- Trigger function
-CREATE OR REPLACE FUNCTION github_entity_audit_trigger_func()
+CREATE OR REPLACE FUNCTION contributor_entity_audit_trigger_func()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
@@ -67,8 +67,8 @@ DECLARE
 BEGIN
     IF v_action = 'INSERT' THEN
         v_action_by := COALESCE(NEW.updated_by, NEW.created_by, current_user);
-        INSERT INTO github_entity_audit (
-            action, action_by, github_entity_id,
+        INSERT INTO contributor_entity_audit (
+            action, action_by, contributor_entity_id,
             name_before, name_after,
             user_id_before, user_id_after,
             company_before, company_after,
@@ -98,8 +98,8 @@ BEGIN
 
     ELSIF v_action = 'UPDATE' THEN
         v_action_by := COALESCE(NEW.updated_by, NEW.created_by, current_user);
-        INSERT INTO github_entity_audit (
-            action, action_by, github_entity_id,
+        INSERT INTO contributor_entity_audit (
+            action, action_by, contributor_entity_id,
             name_before, name_after,
             user_id_before, user_id_after,
             company_before, company_after,
@@ -129,8 +129,8 @@ BEGIN
 
     ELSIF v_action = 'DELETE' THEN
         v_action_by := COALESCE(OLD.deleted_by, OLD.updated_by, OLD.created_by, current_user);
-        INSERT INTO github_entity_audit (
-            action, action_by, github_entity_id,
+        INSERT INTO contributor_entity_audit (
+            action, action_by, contributor_entity_id,
             name_before, name_after,
             user_id_before, user_id_after,
             company_before, company_after,
@@ -159,12 +159,12 @@ BEGIN
         RETURN OLD;
     END IF;
 
-    RAISE WARNING 'github_entity_audit_trigger_func() fired for unexpected operation: %', TG_OP;
+    RAISE WARNING 'contributor_entity_audit_trigger_func() fired for unexpected operation: %', TG_OP;
     RETURN NULL;
 END;
 $$;
 
 -- Trigger binding
-CREATE TRIGGER github_entity_audit_trigger
-AFTER INSERT OR UPDATE OR DELETE ON public.github_entity
-FOR EACH ROW EXECUTE FUNCTION github_entity_audit_trigger_func();
+CREATE TRIGGER contributor_entity_audit_trigger
+AFTER INSERT OR UPDATE OR DELETE ON public.contributor_entity
+FOR EACH ROW EXECUTE FUNCTION contributor_entity_audit_trigger_func();
