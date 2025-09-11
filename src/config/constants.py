@@ -3,6 +3,8 @@ CATS_BREED_ENDPOINT = "/breeds"
 
 GH_BASE_URL = "https://api.github.com"
 GH_REPOS_ENDPOINT = "/orgs/{OWNER}/repos"
+GH_SINGLE_REPO_ENDPOINT = "/repos/{OWNER}/{REPO}"
+GH_REPO_BRANCHES_ENDPOINT = "/repos/{owner}/{repo}/branches"
 GH_WEEKLY_COMMIT = "/repos/{OWNER}/{REPO}/stats/code_frequency"
 GH_YEARLY_COMMIT = "/repos/{OWNER}/{REPO}/stats/participation"
 GH_DAILY_CLONE_COUNT = "/repos/{OWNER}/{REPO}/traffic/clones"

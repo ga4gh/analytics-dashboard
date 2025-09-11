@@ -13,7 +13,7 @@ class GithubRepo(BaseModel):
     fork: bool
     last_update: datetime
     pushed_at: datetime
-    archieved: bool
+    archived: bool
     license: Optional[str] = None
     stargazers_count: int
     watchers_count: int
@@ -37,7 +37,7 @@ class GithubRepoRequest(BaseModel):
     fork: bool
     last_update: datetime
     pushed_at: datetime
-    archieved: bool
+    archived: bool
     license: Optional[str] = None
     stargazers_count: int
     watchers_count: int
@@ -90,7 +90,7 @@ class GithubEntityActionRequest(BaseModel):
     user_id: str
 
 
-class GithubArchievedStat(BaseModel):
+class GithubArchivedStat(BaseModel):
     id: int
     repo_id: str
     weekly_commit_add: int
@@ -107,7 +107,7 @@ class GithubArchievedStat(BaseModel):
     version: int
 
 
-class GithubArchievedStatRequest(BaseModel):
+class GithubArchivedStatRequest(BaseModel):
     repo_id: str
     weekly_commit_add: int
     weekly_commit_del: int

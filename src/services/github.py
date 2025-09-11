@@ -14,14 +14,14 @@ from src.models.github import (
     GithubEntityRequest,
     GithubEntityAction as GithubEntityActionModel,
     GithubEntityActionRequest,
-    GithubArchievedStat as GithubArchievedStatModel,
-    GithubArchievedStatRequest,
+    GithubArchivedStat as GithubArchivedStatModel,
+    GithubArchivedStatRequest,
 )
 from src.clients.github import (
     GithubRepoClient,
     GithubEntityClient,
     GithubEntityActionsClient,
-    GithubArchievedStatsClient,
+    GithubArchivedStatsClient,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class GithubRepos:
             fork=repo_request.fork,
             last_update=repo_request.last_update,
             pushed_at=repo_request.pushed_at,
-            archieved=repo_request.archieved,
+            archived=repo_request.archived,
             license=repo_request.license,
             stargazers_count=repo_request.stargazers_count,
             watchers_count=repo_request.watchers_count,
@@ -78,6 +78,12 @@ class GithubRepos:
                 logger.info(f"Repo {repo['name']} already exists, skipping.")
                 continue
 
+            try:
+                branch_count = self.repo_client.get_repo_branches(repo["owner"]["login"], repo["name"])
+            except Exception as e:
+                logger.warning(f"Could not fetch branches for {repo['name']}: {e}")
+                branch_count = 0
+
             repo_request = GithubRepoRequest(
                 name=repo["name"],
                 repo_link=repo["html_url"],
@@ -86,7 +92,7 @@ class GithubRepos:
                 fork=repo.get("fork", False),
                 last_update=datetime.fromisoformat(repo["updated_at"].replace("Z", "+00:00")),
                 pushed_at=datetime.fromisoformat(repo["pushed_at"].replace("Z", "+00:00")),
-                archieved=repo.get("archived", False),
+                archived=repo.get("archived", False),
                 license=repo["license"]["name"] if repo.get("license") else "Unknown",
                 stargazers_count=repo.get("stargazers_count", 0),
                 watchers_count=repo.get("watchers_count", 0),
@@ -94,13 +100,50 @@ class GithubRepos:
                 open_issues_count=repo.get("open_issues_count", 0),
                 network_count=repo.get("network_count", 0),
                 subscribers_count=repo.get("subscribers_count", 0),
-                branches_count=repo.get("branches_count", 0),
+                branches_count=branch_count,
             )
             created = self.create_repo(repo_request, user)
             logger.info(f"Repo {created.name} synced successfully.")
             synced_repos.append(created)
 
         return synced_repos
+
+    def sync_single_repo(self, user: str) -> GithubRepoModel:
+        repo = self.repo_client.get_single_repo()
+        try:
+            branch_count = self.repo_client.get_repo_branches(repo["owner"]["login"], repo["name"])
+        except Exception as e:
+            logger.warning(f"Could not fetch branches for {repo['name']}: {e}")
+            branch_count = 0
+
+        existing = self.github_repo.get_repo_by_name(repo["name"])
+        repo_request = GithubRepoRequest(
+            name=repo["name"],
+            repo_link=repo["html_url"],
+            owner=repo["owner"]["login"],
+            description=repo.get("description", ""),
+            fork=repo.get("fork", False),
+            last_update=datetime.fromisoformat(repo["updated_at"].replace("Z", "+00:00")),
+            pushed_at=datetime.fromisoformat(repo["pushed_at"].replace("Z", "+00:00")),
+            archived=repo.get("archived", False),
+            license=repo.get("license", {}).get("name") if repo.get("license") else None,
+            stargazers_count=repo.get("stargazers_count", 0),
+            watchers_count=repo.get("watchers_count", 0),
+            forks_count=repo.get("forks_count", 0),
+            open_issues_count=repo.get("open_issues_count", 0),
+            network_count=repo.get("network_count", 0),
+            subscribers_count=repo.get("subscribers_count", 0),
+            branches_count=branch_count,
+        )
+
+        if existing:
+            logger.info(f"Updating existing repo {repo['name']}")
+            updated = self.github_repo.update_repo(existing[0])
+            return updated
+        else:
+            logger.info(f"Creating new repo {repo['name']}")
+            created = self.create_repo(repo_request, user)
+            return created
 
 
 class GithubEntities:
@@ -193,13 +236,13 @@ class GithubEntityActions:
         return synced_actions
 
 
-class GithubArchievedStats:
-    def __init__(self, repo: GhArchievedStatsRepo, client: GithubArchievedStatsClient):
-        self.github_archieved_stats = repo
+class GithubArchivedStats:
+    def __init__(self, repo: GharchivedStatsRepo, client: GithubArchivedStatsClient):
+        self.github_archived_stats = repo
         self.stats_client = client
 
-    def create_stats(self, stats_request: GithubArchievedStatRequest, user: str) -> GithubArchievedStatModel:
-        complete_stats_model = GithubArchievedStatModel(
+    def create_stats(self, stats_request: GithubArchivedStatRequest, user: str) -> GithubArchivedStatModel:
+        complete_stats_model = GithubArchivedStatModel(
             id=0,
             repo_id=stats_request.repo_id,
             weekly_commit_add=stats_request.weekly_commit_add,
@@ -215,11 +258,11 @@ class GithubArchievedStats:
             updated_by=user,
             version=1,
         )
-        self.github_archieved_stats.create_stats(complete_stats_model)
+        self.github_archived_stats.create_stats(complete_stats_model)
         return complete_stats_model
 
-    def sync_stats(self, repo_id: str, user: str) -> GithubArchievedStatModel:
-        existing = self.github_archieved_stats.get_stats_by_repo(repo_id)
+    def sync_stats(self, repo_id: str, user: str) -> GithubArchivedStatModel:
+        existing = self.github_archived_stats.get_stats_by_repo(repo_id)
         if existing:
             logger.info(f"Stats for repo {repo_id} already exist, skipping.")
             return existing
@@ -234,7 +277,7 @@ class GithubArchievedStats:
             "last_14_day_top_referral_path": self.stats_client.get_gh_last_14_day_referral_path(),
         }
 
-        stats_request = GithubArchievedStatRequest(
+        stats_request = GithubArchivedStatRequest(
             repo_id=repo_id,
             weekly_commit_add=stats_data["weekly_commit_add"],
             weekly_commit_del=stats_data["weekly_commit_del"],
