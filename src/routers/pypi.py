@@ -5,7 +5,8 @@ from models.pypi import (
     ReleasesByYearResponse,
     PackageRepoRatioResponse,
     PackageVersions,
-    SourcesCoverageResponse
+    SourcesCoverageResponse,
+    PypiDetails
 )
 
 class Pypi:
@@ -31,6 +32,10 @@ class Pypi:
         @self.router.get("/pypi/all_sources_coverage", response_model=SourcesCoverageResponse)
         async def get_sources_coverage() -> SourcesCoverageResponse:
             return self.pypi_service.get_sources_coverage()
+        
+        @self.router.get("/pypi/project_details", response_model=list[PypiDetails])
+        async def get_project_details():
+            return self.pypi_service.get_project_details()
         
         '''@self.router.get("/pypi/package-repo-ratio", response_model=PackageRepoRatioResponse)
         def package_repo_ratio():

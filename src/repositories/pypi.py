@@ -3,12 +3,12 @@ from models.pypi import (
     ReleasesByYearItem,
     PackageVersions,
     SourceCoverageItem,
-    SourcesCoverageResponse
+    SourcesCoverageResponse,
+    PypiDetails
 )
 
 from .setup import DatabaseConnection
 from .sqlbuilder import SQLBuilder
-from typing import Optional, List
 
 
 class Pypi:
@@ -82,7 +82,7 @@ class Pypi:
             with conn.cursor() as cur:
                 cur.execute(query)
                 rows = cur.fetchall()
-                items: List[SourceCoverageItem] = []
+                items: list[SourceCoverageItem] = []
                 for (source, total, covered, percent) in rows:
                     # sometimes covered or percent may be None, handle
                     items.append(SourceCoverageItem(
@@ -94,5 +94,55 @@ class Pypi:
         response = SourcesCoverageResponse(coverages=items)
         print(response)
         return SourcesCoverageResponse(coverages=items)
+    
+    def get_project_details(self) -> list[PypiDetails]:
+        """
+        Returns a list of PypiDetails: each package, its metadata, and version counts
+        """
+        query = """
+        SELECT 
+            p.project_name, p.description, p.package_url, p.release_url, p.github_url, p.author_name, 
+            p.author_email, p.category, COUNT(pv.package_version) AS version_count
+        FROM pypi p
+            LEFT JOIN pypi_versions pv ON pv.id = p.id
+        GROUP BY
+            p.project_name, p.description, p.package_url, p.release_url, p.github_url, p.author_name, p.author_email, p.category
+        ORDER BY version_count desc;
+        """
+
+        result: list[PypiDetails] = []
+        with self.db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                for (
+                    project_name,
+                    description,
+                    package_url,
+                    release_url,
+                    github_url,
+                    author_name,
+                    author_email,
+                    category,
+                    version_count
+                ) in rows:
+                    pv = PackageVersions(
+                        package_name=project_name,
+                        versions=version_count or 0
+                    )
+                    details = PypiDetails(
+                        project_name=project_name,
+                        description=description,
+                        package_url=package_url,
+                        release_url=release_url,
+                        github_url=github_url,
+                        author_name=author_name,
+                        author_email=author_email,
+                        category=category,
+                        versions=[pv]
+                    )
+                    result.append(details)
+        return result
+
 
             

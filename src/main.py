@@ -23,13 +23,6 @@ def main() -> FastAPI:
         except RuntimeError:
             pass
 
-    #cats_client = cats.Cats(CATS_BASE_URL, config.cats_api_key)
-
-    #animals_fields = set(Animal.model_fields.keys())
-    #animals_sql_builder = sqlbuilder.SQLBuilder("animals").allow_fields(animals_fields - {"id"})
-    #animals_repo = AnimalRepo(db_conn, animals_sql_builder)
-    #animals_service = AnimalService(animals_repo, cats_client)
-    #animals_router = AnimalRouter(animals_service)
     pypi_fields = set(PypiModel.model_fields.keys())
     pypi_sql_builder = sqlbuilder.SQLBuilder("pypi").allow_fields(pypi_fields)
     pypi_repo = PypiRepo(db_conn, pypi_sql_builder)
@@ -37,7 +30,6 @@ def main() -> FastAPI:
     pypi_router = PypiRouter(pypi_service)
 
     app = FastAPI(lifespan=lifespan)
-    #app.include_router(animals_router.router)
     app.include_router(pypi_router.router)
 
     for r in app.routes:

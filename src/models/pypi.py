@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 class Pypi(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -18,6 +18,7 @@ class Pypi(BaseModel):
     author_email: Optional[str]
     package_version: str
     is_latest: bool
+    category: str
     created_by: str
     created_at: datetime
     updated_by: str
@@ -63,7 +64,20 @@ class SourceCoverageItem(BaseModel):
     coverage_percent: float
 
 class SourcesCoverageResponse(BaseModel):
-    coverages: List[SourceCoverageItem]
+    coverages: list[SourceCoverageItem]
 
 class PackageRepoRatioResponse(BaseModel):
     package_repo_ratio_percent: float
+    
+class PypiDetails(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    project_name: str
+    description: Optional[str]
+    package_url: str
+    release_url: str
+    github_url: Optional[str]
+    author_name: Optional[str]
+    author_email: Optional[str]
+    category: str
+    versions: list[PackageVersions]

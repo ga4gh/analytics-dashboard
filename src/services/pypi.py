@@ -1,9 +1,9 @@
-from typing import List
 from models.pypi import (
     ReleasesByYearResponse,
     PackageRepoRatioResponse,
     PackageVersions,
-    SourcesCoverageResponse
+    SourcesCoverageResponse,
+    PypiDetails
 )
 from repositories.pypi import Pypi as PypiRepo
 
@@ -22,3 +22,6 @@ class Pypi:
 
     def get_sources_coverage(self) -> SourcesCoverageResponse:
         return self.pypi_repo.get_sources_coverage()
+    
+    def get_project_details(self) -> list[PypiDetails]:
+        return self.pypi_repo.get_project_details()
