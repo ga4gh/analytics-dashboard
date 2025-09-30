@@ -77,4 +77,5 @@ jobs:
         run: |
           chmod +x sql/migrate.sh
           export DATABASE_URL="${{ needs.terraform.outputs.database_url }}"
+          export GITHUB_ACTIONS=true
           bash sql/migrate.sh up
