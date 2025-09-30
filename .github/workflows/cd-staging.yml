@@ -73,7 +73,7 @@ jobs:
           
       - name: Run database migrations
         env:
-          DATABASE_URL: ${{ needs.terraform.outputs.database_url }}
+          DATABASE_URL: ${{ needs.terraform.outputs.database_url || secrets.DATABASE_URL }}
         run: |
           chmod +x sql/migrate.sh
-          DATABASE_URL="${{ needs.terraform.outputs.database_url }}" GITHUB_ACTIONS=true cd sql && ./migrate.sh up
+          bash sql/migrate.sh up
