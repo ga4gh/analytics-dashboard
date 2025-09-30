@@ -13,3 +13,10 @@ output "db_password" {
   value       = random_password.master.result
   sensitive   = true
 }
+
+output "database_url" {
+  description = "Database connection URL"
+  value       = "postgresql://${var.master_username}:${urlencode(random_password.master.result)}@${aws_db_i
+  nstance.postgres.endpoint}/analytics?sslmode=require"
+  sensitive   = true
+}
