@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS github_repos (
 	pushed_at TIMESTAMP NOT NULL,
 	is_archived BOOLEAN NOT NULL,
 	license VARCHAR(64) NOT NULL,
-	stargazers_counts INTEGER NOT NULL,
+	stargazers_count INTEGER NOT NULL,
 	watchers_count INTEGER NOT NULL,
 	forks_count INTEGER NOT NULL,
 	open_issues_count INTEGER NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS github_repos (
   	deleted_at TIMESTAMPTZ,
   	version INTEGER NOT NULL,
 	CONSTRAINT fk_record
-        FOREIGN KEY (id)
+        FOREIGN KEY (record_id)
         REFERENCES records (id)
         ON DELETE CASCADE
 );
@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS github_repos_audit (
 	is_archived_after BOOLEAN,
 	license_before VARCHAR(64),
 	license_after VARCHAR(64),
-	stargazers_counts_before INTEGER,
-	stargazers_counts_after INTEGER,
+	stargazers_count_before INTEGER,
+	stargazers_count_after INTEGER,
 	watchers_count_before INTEGER,
 	watchers_count_after INTEGER,
 	forks_count_before INTEGER,
@@ -117,7 +117,7 @@ BEGIN
 			action, action_by, github_repo_id,
 			name_after, repo_link_after, owner_after, description_after,
 			is_fork_after, last_updated_after, pushed_at_after, is_archived_after, license_after,
-			stargazers_counts_after, watchers_count_after, forks_count_after,
+			stargazers_count_after, watchers_count_after, forks_count_after,
 			open_issues_count_after, network_count_after, subscribers_count_after, branches_count_after,
 			created_by_after, created_at_after, updated_by_after, updated_at_after,
 			deleted_by_after, deleted_at_after, version_after
@@ -125,7 +125,7 @@ BEGIN
 			v_action, v_action_by, NEW.id,
 			NEW.name, NEW.repo_link, NEW.owner, NEW.description,
 			NEW.is_fork, NEW.last_updated, NEW.pushed_at, NEW.is_archived, NEW.license,
-			NEW.stargazers_counts, NEW.watchers_count, NEW.forks_count,
+			NEW.stargazers_count, NEW.watchers_count, NEW.forks_count,
 			NEW.open_issues_count, NEW.network_count, NEW.subscribers_count, NEW.branches_count,
 			NEW.created_by, NEW.created_at, NEW.updated_by, NEW.updated_at,
 			NEW.deleted_by, NEW.deleted_at, NEW.version
@@ -145,7 +145,7 @@ BEGIN
 			pushed_at_before, pushed_at_after,
 			is_archived_before, is_archived_after,
 			license_before, license_after,
-			stargazers_counts_before, stargazers_counts_after,
+			stargazers_count_before, stargazers_count_after,
 			watchers_count_before, watchers_count_after,
 			forks_count_before, forks_count_after,
 			open_issues_count_before, open_issues_count_after,
@@ -170,7 +170,7 @@ BEGIN
 			OLD.pushed_at, NEW.pushed_at,
 			OLD.is_archived, NEW.is_archived,
 			OLD.license, NEW.license,
-			OLD.stargazers_counts, NEW.stargazers_counts,
+			OLD.stargazers_count, NEW.stargazers_count,
 			OLD.watchers_count, NEW.watchers_count,
 			OLD.forks_count, NEW.forks_count,
 			OLD.open_issues_count, NEW.open_issues_count,
@@ -193,7 +193,7 @@ BEGIN
 			action, action_by, github_repo_id,
 			name_before, repo_link_before, owner_before, description_before,
 			is_fork_before, last_updated_before, pushed_at_before, is_archived_before, license_before,
-			stargazers_counts_before, watchers_count_before, forks_count_before,
+			stargazers_count_before, watchers_count_before, forks_count_before,
 			open_issues_count_before, network_count_before, subscribers_count_before, branches_count_before,
 			created_by_before, created_at_before, updated_by_before, updated_at_before,
 			deleted_by_before, deleted_at_before, version_before
@@ -201,7 +201,7 @@ BEGIN
 			v_action, v_action_by, OLD.id,
 			OLD.name, OLD.repo_link, OLD.owner, OLD.description,
 			OLD.is_fork, OLD.last_updated, OLD.pushed_at, OLD.is_archived, OLD.license,
-			OLD.stargazers_counts, OLD.watchers_count, OLD.forks_count,
+			OLD.stargazers_count, OLD.watchers_count, OLD.forks_count,
 			OLD.open_issues_count, OLD.network_count, OLD.subscribers_count, OLD.branches_count,
 			OLD.created_by, OLD.created_at, OLD.updated_by, OLD.updated_at,
 			OLD.deleted_by, OLD.deleted_at, OLD.version
