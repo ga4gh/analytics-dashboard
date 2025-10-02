@@ -1,58 +1,3 @@
--- Create main table
-
-CREATE TABLE IF NOT EXISTS records (
-  	id BIGSERIAL PRIMARY KEY,
-  	record_type record_type NOT NULL,
-  	source source NOT NULL,
-  	status record_status NOT NULL,
-  	created_by VARCHAR(64) NOT NULL,
-  	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  	updated_by VARCHAR(64) NOT NULL,
-  	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  	deleted_by VARCHAR(64),
-  	deleted_at TIMESTAMPTZ,
-  	version INTEGER NOT NULL
-);
-
--- Create main table indexes
-
-
--- Create Audit table
-
-CREATE TABLE IF NOT EXISTS records_audit (
-    audit_id SERIAL PRIMARY KEY,
-    action_tstamp TIMESTAMPTZ NOT NULL DEFAULT now(),
-    action TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
-    action_by VARCHAR(64),
-    record_id INTEGER,
-    record_type_before record_type,
-    record_type_after record_type,
-    source_before source,
-    source_after source,
-    status_before record_status,
-    status_after record_status,
-    created_by_before VARCHAR(64),
-    created_by_after VARCHAR(64),
-    created_at_before TIMESTAMP,
-    created_at_after TIMESTAMP,
-    updated_by_before VARCHAR(64),
-    updated_by_after VARCHAR(64),
-    updated_at_before TIMESTAMP,
-    updated_at_after TIMESTAMP,
-    deleted_by_before VARCHAR(64),
-    deleted_by_after VARCHAR(64),
-    deleted_at_before TIMESTAMP,
-    deleted_at_after TIMESTAMP,
-    version_before INTEGER,
-    version_after INTEGER,
-    UNIQUE(record_id, version_after)
-);
-
--- Create audit table indexes
-
-
--- Trigger function
-
 CREATE OR REPLACE FUNCTION records_audit_trigger_func()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
@@ -144,8 +89,14 @@ BEGIN
 END;
 $$;
 
--- Attach Trigger
+ALTER TABLE records_audit 
+DROP COLUMN IF EXISTS keyword_before,
+DROP COLUMN IF EXISTS keyword_after,
+DROP COLUMN IF EXISTS product_line_before,
+DROP COLUMN IF EXISTS product_line_after;
 
-CREATE TRIGGER trg_audit_records
-AFTER INSERT OR UPDATE OR DELETE ON public.records
-FOR EACH ROW EXECUTE FUNCTION records_audit_trigger_func();
+DROP INDEX IF EXISTS idx_records_keyword;
+DROP INDEX IF EXISTS idx_records_product_line;
+
+ALTER TABLE records DROP COLUMN IF EXISTS keyword;
+ALTER TABLE records DROP COLUMN IF EXISTS product_line;

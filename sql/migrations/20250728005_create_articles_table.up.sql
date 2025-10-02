@@ -3,7 +3,9 @@
 CREATE TABLE IF NOT EXISTS articles (
     id SERIAL PRIMARY KEY,
     record_id INTEGER NOT NULL,
-    abstract TEXT NOT NULL,
+    abstract TEXT,
+    title TEXT NOT NULL,
+    journal TEXT NOT NULL,
     source_id VARCHAR NOT NULL,
     doi VARCHAR,
     status article_status NOT NULL,

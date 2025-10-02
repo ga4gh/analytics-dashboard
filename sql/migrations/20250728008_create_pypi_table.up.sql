@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS pypi (
 -- Create indexes on pypi table
 
 CREATE INDEX IF NOT EXISTS idx_pypi_project_name ON pypi(project_name);
-CREATE INDEX IF NOT EXISTS idx_pypi_python_version ON pypi(python_version);
 
 -- Create pypi audit table
 

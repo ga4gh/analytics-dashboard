@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS authors (
     id SERIAL PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
-    contact VARCHAR(64) NOT NULL,
+    contact VARCHAR(64),
     is_primary BOOLEAN NOT NULL,
     article_type article_type NOT NULL,
     article_id INTEGER,

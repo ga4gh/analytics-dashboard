@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS pypi_versions (
     id INTEGER NOT NULL,
     python_version VARCHAR(32),
-    package_version VARCHAR(32) NOT NULL
+    package_version VARCHAR(32) NOT NULL,
     release_date TIMESTAMP,
     download_url VARCHAR(256) NOT NULL,
     created_by VARCHAR(64) NOT NULL,
@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS pypi_versions (
 -- Indexes on main table
 
 CREATE INDEX IF NOT EXISTS idx_pypi_versions_python_version ON pypi_versions(python_version);
-CREATE INDEX IF NOT EXISTS idx_pypi_versions_release_date ON pypi_versions(release_date);
 
 -- Audit table for pypi_versions
 
