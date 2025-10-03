@@ -1,32 +1,63 @@
+# main.py
+import os
+import logging
 import uvicorn
 from fastapi import FastAPI
 
-from .clients import cats
-from .config.config import config
-from .config.constants import CATS_BASE_URL
-from .models.animal import Animal
-from .repositories import setup, sqlbuilder
-from .repositories.animals import Animals as AnimalRepo
-from .routers.animals import Animals as AnimalRouter
-from .services.animals import Animals as AnimalService
+# config
+from src.config.config import config
+from src.config.constants import GH_BASE_URL
+
+# clients / repos / services / routers
+from src.clients.github import GithubRepoClient
+from src.repositories.github import GithubRepo
+from src.repositories import setup
+from src.services.github import GithubRepos as GithubReposService
+from src.routers.github import GithubRepoRouter
+
+from src.repositories.record import Record as RecordRepo
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def main() -> FastAPI:
-    db_conn = setup.DatabaseConnection(config.database_url)
+    # --- DB setup
+    db_url = getattr(config, "database_url", None)
+    if not db_url:
+        raise RuntimeError("Database URL not configured in config.database_url")
+
+    db_conn = setup.DatabaseConnection(db_url)
     db_conn.connect()
+    logger.info("Database connected")
 
-    cats_client = cats.Cats(CATS_BASE_URL, config.cats_api_key)
+    # --- GitHub client + service setup
+    gh_api_key = os.getenv("GITHUB_API_KEY", "")
+    gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
 
-    animals_fields = set(Animal.model_fields.keys())
-    animals_sql_builder = sqlbuilder.SQLBuilder("animals").allow_fields(animals_fields - {"id"})
-    animals_repo = AnimalRepo(db_conn, animals_sql_builder)
-    animals_service = AnimalService(animals_repo, cats_client)
-    animals_router = AnimalRouter(animals_service)
+    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key, gh_org)
+    gh_repo = GithubRepo(db_conn, table_name="github_repos")
+    print("record repo")
+    record_repo = RecordRepo(db_conn, table_name="records")
+    gh_service = GithubReposService(gh_repo, gh_client, record_repo)
+    gh_router = GithubRepoRouter(gh_service)
 
+    # Optionally sync repos once at startup
+    # The service.sync_repos expects a `user` string (created_by/updated_by).
+    sync_user = os.getenv("GITHUB_SYNC_USER", "system")
+    try:
+        logger.info("Starting GitHub repos sync...")
+        synced = gh_service.sync_repos(sync_user)
+        logger.info("GitHub sync completed. %d repos synced.", len(synced))
+    except Exception as e:
+        logger.exception("GitHub sync failed: %s", e)
+
+    # --- FastAPI app + router
     app = FastAPI()
-    app.include_router(animals_router.router)
+    app.include_router(gh_router.router)
 
     return app
+
 
 if __name__ == "__main__":
     app = main()

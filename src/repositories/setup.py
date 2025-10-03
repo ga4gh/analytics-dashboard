@@ -28,7 +28,7 @@ class DatabaseConnection:
         if not self.pool:
             error_msg = "Database not connected. Call connect() first."
             raise RuntimeError(error_msg)
-
+        print(self.pool)
         conn = self.pool.getconn()
         try:
             yield conn

@@ -5,15 +5,15 @@ from datetime import datetime
 
 class GithubRepo(BaseModel):
     id: int
-    record_id: str
+    record_id: int
     name: str
     repo_link: str
     owner: str
     description: Optional[str] = None
-    fork: bool
-    last_update: datetime
+    is_fork: bool
+    last_updated: datetime
     pushed_at: datetime
-    archived: bool
+    is_archived: bool
     license: Optional[str] = None
     stargazers_count: int
     watchers_count: int
@@ -34,10 +34,10 @@ class GithubRepoRequest(BaseModel):
     repo_link: str
     owner: str
     description: Optional[str] = None
-    fork: bool
-    last_update: datetime
+    is_fork: bool
+    last_updated: datetime
     pushed_at: datetime
-    archived: bool
+    is_archived: bool
     license: Optional[str] = None
     stargazers_count: int
     watchers_count: int
