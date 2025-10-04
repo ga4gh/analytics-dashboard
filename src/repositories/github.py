@@ -93,7 +93,7 @@ class GithubArchivedStats:
             return []
 
 
-class GithubContributerEntities:
+class GithubEntities:
     def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
         self.db = db
         self.sql_builder = sql_builder
