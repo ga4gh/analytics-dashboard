@@ -74,7 +74,7 @@ class GithubEntityRequest(BaseModel):
 
 class GithubEntityAction(BaseModel):
     id: int
-    repo_id: str
+    repo_id: int
     action_type: str
     user_id: str
     created_at: datetime
@@ -85,14 +85,14 @@ class GithubEntityAction(BaseModel):
 
 
 class GithubEntityActionRequest(BaseModel):
-    repo_id: str
+    repo_id: int
     action_type: str
     user_id: str
 
 
 class GithubArchivedStat(BaseModel):
     id: int
-    repo_id: str
+    repo_id: int
     weekly_commit_add: int
     weekly_commit_del: int
     yearly_commit_count: int
@@ -108,7 +108,7 @@ class GithubArchivedStat(BaseModel):
 
 
 class GithubArchivedStatRequest(BaseModel):
-    repo_id: str
+    repo_id: int
     weekly_commit_add: int
     weekly_commit_del: int
     yearly_commit_count: int
