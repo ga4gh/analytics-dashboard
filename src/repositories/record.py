@@ -5,22 +5,17 @@ from .sqlbuilder import SQLBuilder
 
 
 class Record:
-    def __init__(self, db: DatabaseConnection, table_name: str = "record") -> None:
+    def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
         self.db = db
-        self.table_name = table_name
+        self.sql_builder = sql_builder
 
-    def create_record(self, record: RecordModel):
+    def insert(self, record: RecordModel) -> int:
         data = record.model_dump(exclude={"id"})
-        columns = list(data.keys())
-        values = tuple(data.values())
-        placeholders = ", ".join(["%s"] * len(values))
-        query = f"INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        with self.db.get_connection() as conn:
-            with conn.cursor() as cur:
-                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                print(query, values)    
-                cur.execute(query, values)                           
-                record_id = cur.fetchone()[0]  # Get the generated ID
+        query, values = self.sql_builder.build_insert(data)
+
+        with self.db.get_connection() as conn, conn.cursor() as cur:
+                cur.execute(query, values)
+                record_id = cur.fetchone()[0]
                 conn.commit()
                 return record_id
 
@@ -32,11 +27,11 @@ class Record:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_by_id(self, id: int) -> RecordModel | None:
+    def get_by_id(self, record_id: int) -> RecordModel | None:
         query = "SELECT * FROM records WHERE id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (id,))
+                cur.execute(query, (record_id,))
                 row = cur.fetchone()
 
                 if row and cur.description:

@@ -1,55 +1,54 @@
-from src.models.animal import Animal
+from src.models.author import Author as AuthorModel
 
 from .setup import DatabaseConnection
 from .sqlbuilder import SQLBuilder
 
 
-class Animals:
+class Author:
     def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
         self.db = db
         self.sql_builder = sql_builder
 
-    def create_animal(self, animal: Animal) -> None:
-        data = animal.model_dump(exclude={"id"})
+    def insert(self, author: AuthorModel) -> None:
+        data = author.model_dump(exclude={"id", "affiliations"})
         query, values = self.sql_builder.build_insert(data)
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def update_animal(self, animal: Animal) -> None:
-        data = animal.model_dump(exclude={"id"})
-        query, values = self.sql_builder.build_update(data, animal.id, "id")
+    def update(self, author: AuthorModel) -> None:
+        data = author.model_dump(exclude={"id", "affiliations"})
+        query, values = self.sql_builder.build_update(data, author.id, "id")
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_animal_by_id(self, animal_id: int) -> Animal | None:
-        query = "SELECT * FROM animals WHERE id = %s"
+    def get_by_id(self, author_id: int) -> AuthorModel | None:
+        query = "SELECT * FROM authors WHERE id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (animal_id,))
+                cur.execute(query, (author_id,))
                 row = cur.fetchone()
 
                 if row and cur.description:
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row, strict=False))
-                    return Animal(**data)
+                    return AuthorModel(**data)
                 return None
 
-    def get_animal_by_name(self, name: str) -> list[Animal]:
-        query = "SELECT * FROM animals WHERE name = %s"
+    def get_by_article_id(self, article_id: int) -> list[AuthorModel]:
+        query = "SELECT * FROM authors WHERE article_id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (name,))
+                cur.execute(query, (article_id,))
                 rows = cur.fetchall()
 
+                authors = []
                 if rows and cur.description:
                     columns = [desc[0] for desc in cur.description]
-                    animals = []
                     for row in rows:
                         data = dict(zip(columns, row, strict=False))
-                        animals.append(Animal(**data))
-                    return animals
-                return []
+                        authors.append(AuthorModel(**data))
+                return authors
