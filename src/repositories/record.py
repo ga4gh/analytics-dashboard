@@ -15,7 +15,7 @@ class Record:
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
-                record_id = cur.fetchone()[0] 
+                record_id = cur.fetchone()[0]
                 conn.commit()
                 return record_id
 
@@ -27,11 +27,11 @@ class Record:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_by_id(self, id: int) -> RecordModel | None:
+    def get_by_id(self, record_id: int) -> RecordModel | None:
         query = "SELECT * FROM records WHERE id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (id,))
+                cur.execute(query, (record_id,))
                 row = cur.fetchone()
 
                 if row and cur.description:

@@ -1,6 +1,6 @@
-from datetime import datetime
-from typing import List
-from fastapi import APIRouter, HTTPException, Query, Header, Response
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
 from src.models.article import Article
@@ -19,7 +19,9 @@ class InsertArticlesResponse(BaseModel):
     updated: int
     skipped: int
 
-
+START_DATE_QUERY = Query(None, description="Start date (ISO format)")
+END_DATE_QUERY = Query(None, description="End date (ISO format), defaults to today")
+STATUS_QUERY = Query(None, description="Filter by article status")
 class Pubmed:
     def __init__(self, pubmed_service: PubmedService) -> None:
         self.router = APIRouter()
@@ -41,32 +43,32 @@ class Pubmed:
                 )
                 return InsertArticlesResponse(**result)
             except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
-        @self.router.get("/pubmed/articles/{keyword}", response_model=List[Article])
+        @self.router.get("/pubmed/articles/{keyword}", response_model=list[Article])
         async def get_articles(
             keyword: str,
-            start_date: datetime = Query(None, description="Start date (ISO format)"),
-            end_date: datetime = Query(None, description="End date (ISO format), defaults to today"),
-            status: str = Query(None, description="Filter by article status")
-        ) -> List[Article]:
+            start_date: datetime = START_DATE_QUERY,
+            end_date: datetime = END_DATE_QUERY,
+            status: str = STATUS_QUERY
+        ) -> list[Article]:
             try:
                 # Route to appropriate method based on query parameters
                 if start_date is not None:
                     # Date filtering
                     if end_date is None:
-                        end_date = datetime.now()
-                    
+                        end_date = datetime.now(tz=UTC)
+
                     if start_date >= end_date:
-                        raise HTTPException(status_code=400, detail="Start date must be before end date")
-                    
+                        raise HTTPException(status_code=400, detail="Start date must be before end date") # noqa: TRY301
+
                     articles = self.pubmed_service.get_articles_by_keyword_and_date(
                         keyword=keyword,
                         start_date=start_date,
                         end_date=end_date
                     )
                 elif status is not None:
-                    # Status filtering 
+                    # Status filtering
                     articles = self.pubmed_service.get_articles_by_keyword_and_status(
                         keyword=keyword,
                         status=status
@@ -74,11 +76,9 @@ class Pubmed:
                 else:
                     # Basic keyword search
                     articles = self.pubmed_service.get_articles_by_keyword(keyword=keyword)
-                
+
                 if not articles:
-                    raise HTTPException(status_code=404, detail="No articles found for criteria")
-                return articles
-            except HTTPException:
-                raise
+                    raise HTTPException(status_code=404, detail="No articles found for criteria") # noqa: TRY301
+                return articles  # noqa: TRY300
             except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e

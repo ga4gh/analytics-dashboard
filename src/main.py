@@ -2,17 +2,18 @@ import uvicorn
 from fastapi import FastAPI
 
 from .clients import pubmed
-from .config.config import config
 from .config import constants
+from .config.config import config
 from .models.article import Article
 from .models.author import Author
 from .models.record import Record
 from .repositories import setup, sqlbuilder
 from .repositories.article import Article as ArticleRepo
-from .repositories.record import Record as RecordRepo
 from .repositories.author import Author as AuthorRepo
+from .repositories.record import Record as RecordRepo
 from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
+
 
 def main() -> FastAPI:
 
@@ -35,10 +36,10 @@ def main() -> FastAPI:
     # Client setup
     pubmed_client = pubmed.Pubmed(constants.PUBMED_BASE_URL, config.pubmed_api_key)
 
-    # Service setup 
+    # Service setup
     pubmed_service = PubmedService(author_repo, record_repo, article_repo, pubmed_client)
 
-    # Router setup 
+    # Router setup
     animals_router = PubmedRouter(pubmed_service)
 
     app = FastAPI()

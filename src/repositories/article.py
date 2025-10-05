@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from src.models.article import Article as ArticleModel
 
 from .setup import DatabaseConnection
@@ -16,7 +17,7 @@ class Article:
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
                 cur.execute(query, values)
-                article_id = cur.fetchone()[0]  
+                article_id = cur.fetchone()[0]
                 conn.commit()
                 return article_id
 
@@ -28,11 +29,11 @@ class Article:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_by_id(self, id: int) -> ArticleModel | None:
+    def get_by_id(self, article_id: int) -> ArticleModel | None:
         query = "SELECT * FROM articles WHERE id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (id,))
+                cur.execute(query, (article_id,))
                 row = cur.fetchone()
 
                 if row and cur.description:
@@ -55,55 +56,9 @@ class Article:
                 return None
 
     def get_by_keyword(self, keyword: str) -> list[ArticleModel]:
-        query = "SELECT * FROM articles WHERE keyword = %s"
-
-        with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (keyword,))
-                rows = cur.fetchall()
-
-                articles = []
-                if rows and cur.description:
-                    columns = [desc[0] for desc in cur.description]
-                    for row in rows:
-                        data = dict(zip(columns, row, strict=False))
-                        articles.append(ArticleModel(**data))
-                return articles
-
-    def get_by_keyword_and_date(self, keyword: str, start_date: datetime, end_date: datetime) -> list[ArticleModel]:
-        query = "SELECT * FROM articles WHERE keyword = %s AND publish_date BETWEEN %s AND %s"
-
-        with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (keyword, start_date, end_date))
-                rows = cur.fetchall()
-
-                articles = []
-                if rows and cur.description:
-                    columns = [desc[0] for desc in cur.description]
-                    for row in rows:
-                        data = dict(zip(columns, row, strict=False))
-                        articles.append(ArticleModel(**data))
-                return articles
-
-    def get_by_keyword_and_status(self, keyword: str, status: str) -> list[ArticleModel]:
-        query = "SELECT * FROM articles WHERE keyword = %s AND status = %s"
-
-        with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (keyword, status))
-                rows = cur.fetchall()
-
-                articles = []
-                if rows and cur.description:
-                    columns = [desc[0] for desc in cur.description]
-                    for row in rows:
-                        data = dict(zip(columns, row, strict=False))
-                        articles.append(ArticleModel(**data))
-                return articles
-
-    def get_by_keyword(self, keyword: str) -> list[ArticleModel]:
-        """Get articles by keyword using the records table keyword array."""
         query = """
-            SELECT a.* FROM articles a 
-            JOIN records r ON a.record_id = r.id 
+            SELECT a.* FROM articles a
+            JOIN records r ON a.record_id = r.id
             WHERE %s = ANY(r.keyword)
         """
 
@@ -120,10 +75,9 @@ class Article:
                 return articles
 
     def get_by_keyword_and_date(self, keyword: str, start_date: datetime, end_date: datetime) -> list[ArticleModel]:
-        """Get articles by keyword and date using the records table keyword array."""
         query = """
-            SELECT a.* FROM articles a 
-            JOIN records r ON a.record_id = r.id 
+            SELECT a.* FROM articles a
+            JOIN records r ON a.record_id = r.id
             WHERE %s = ANY(r.keyword) AND a.publish_date BETWEEN %s AND %s
         """
 
@@ -140,10 +94,9 @@ class Article:
                 return articles
 
     def get_by_keyword_and_status(self, keyword: str, status: str) -> list[ArticleModel]:
-        """Get articles by keyword and status using the records table keyword array."""
         query = """
-            SELECT a.* FROM articles a 
-            JOIN records r ON a.record_id = r.id 
+            SELECT a.* FROM articles a
+            JOIN records r ON a.record_id = r.id
             WHERE %s = ANY(r.keyword) AND a.status = %s
         """
 

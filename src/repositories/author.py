@@ -25,11 +25,11 @@ class Author:
                 cur.execute(query, values)
                 conn.commit()
 
-    def get_by_id(self, id: int) -> AuthorModel | None:
+    def get_by_id(self, author_id: int) -> AuthorModel | None:
         query = "SELECT * FROM authors WHERE id = %s"
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
-                cur.execute(query, (id,))
+                cur.execute(query, (author_id,))
                 row = cur.fetchone()
 
                 if row and cur.description:
