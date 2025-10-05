@@ -22,7 +22,7 @@ class SQLBuilder:
         columns = list(data.keys())
         values = tuple(data.values())
 
-        query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+        query = sql.SQL("INSERT INTO {} ({}) VALUES ({}) RETURNING id").format(
               sql.Identifier(self.table_name),
               sql.SQL(", ").join(map(sql.Identifier, columns)),
               sql.SQL(", ").join(sql.Placeholder() * len(values))

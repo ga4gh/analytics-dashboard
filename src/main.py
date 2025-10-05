@@ -1,33 +1,69 @@
 import uvicorn
 from fastapi import FastAPI
 
-from .clients import cats
+from .clients import pubmed
+from .config import constants
 from .config.config import config
-from .config.constants import CATS_BASE_URL
-from .models.animal import Animal
+from .models.article import Article
+from .models.author import Author
+from .models.record import Record
 from .repositories import setup, sqlbuilder
-from .repositories.animals import Animals as AnimalRepo
-from .routers.animals import Animals as AnimalRouter
-from .services.animals import Animals as AnimalService
+from .repositories.article import Article as ArticleRepo
+from .repositories.author import Author as AuthorRepo
+from .repositories.record import Record as RecordRepo
+from .routers.pubmed import Pubmed as PubmedRouter
+from .services.pubmed import Pubmed as PubmedService
 
+from config.config import config
+from repositories import setup, sqlbuilder
+from routers.pypi import Pypi as PypiRouter
+from services.pypi import Pypi as PypiService
+from repositories.pypi import Pypi as PypiRepo
+from models.pypi import Pypi as PypiModel
+from contextlib import asynccontextmanager
 
 def main() -> FastAPI:
+    app = FastAPI()
+
+    # DB setup
     db_conn = setup.DatabaseConnection(config.database_url)
     db_conn.connect()
 
-    cats_client = cats.Cats(CATS_BASE_URL, config.cats_api_key)
+    record_fields = set(Record.model_fields.keys())
+    record_sql_builder = sqlbuilder.SQLBuilder("records").allow_fields(record_fields - {"id"})
+    record_repo = RecordRepo(db_conn, record_sql_builder)
 
-    animals_fields = set(Animal.model_fields.keys())
-    animals_sql_builder = sqlbuilder.SQLBuilder("animals").allow_fields(animals_fields - {"id"})
-    animals_repo = AnimalRepo(db_conn, animals_sql_builder)
-    animals_service = AnimalService(animals_repo, cats_client)
-    animals_router = AnimalRouter(animals_service)
+    article_fields = set(Article.model_fields.keys())
+    article_sql_builder = sqlbuilder.SQLBuilder("articles").allow_fields(article_fields - {"id"})
+    article_repo = ArticleRepo(db_conn, article_sql_builder)
+
+    author_fields = set(Author.model_fields.keys())
+    author_sql_builder = sqlbuilder.SQLBuilder("authors").allow_fields(author_fields - {"id"})
+    author_repo = AuthorRepo(db_conn, author_sql_builder)
+
+    # Client setup
+    pubmed_client = pubmed.Pubmed(constants.PUBMED_BASE_URL, config.pubmed_api_key)
+
+    # Service setup
+    pubmed_service = PubmedService(author_repo, record_repo, article_repo, pubmed_client)
+
+    # Router setup
+    pubmed_router = PubmedRouter(pubmed_service)
 
     app = FastAPI()
-    app.include_router(animals_router.router)
+    app.include_router(pubmed_router.router)
 
+
+    pypi_fields = set(PypiModel.model_fields.keys())
+    pypi_sql_builder = sqlbuilder.SQLBuilder("pypi").allow_fields(pypi_fields)
+    pypi_repo = PypiRepo(db_conn, pypi_sql_builder)
+    pypi_service = PypiService(pypi_repo)
+    pypi_router = PypiRouter(pypi_service)
+
+    app.include_router(pypi_router.router)
+        
     return app
 
 if __name__ == "__main__":
     app = main()
-    uvicorn.run(app, host=config.host, port=config.port, reload=config.debug)
+    uvicorn.run(app, host=config.host, port=config.port, reload=False)
