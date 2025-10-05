@@ -25,7 +25,8 @@ class Pubmed:
         self.article_repo = article_repo
         self.pubmed_client = pubmed_client
 
-    def insert_articles_by_keyword(self, keyword: str, created_by: str, pubmed_db: str) -> dict[str, int]:
+    def insert_articles_by_keyword(self, keyword: str, created_by: str,
+                                   pubmed_db: str) -> dict[str, int]:
         processed = 0
         created = 0
         updated = 0
@@ -84,9 +85,7 @@ class Pubmed:
                             created_by=created_by,
                             updated_by=created_by
                         )
-                        print(f"Inserting record for article {article.source_id}")
                         record_id = self.record_repo.insert(record)
-                        print(f"Record inserted with ID: {record_id}")
                         article.record_id = record_id
 
                         article.created_by = created_by
@@ -106,14 +105,7 @@ class Pubmed:
                         created += 1
                     else:
                         skipped += 1
-                except (requests.RequestException, ValueError, KeyError) as e:
-                    print(f"Error processing article {article.source_id}: {e}")
-                    skipped += 1
-                except Exception as e:
-                    print(f"Unexpected error processing article {article.source_id}: {e}")
-                    print(f"Error type: {type(e)}")
-                    import traceback
-                    traceback.print_exc()
+                except (requests.RequestException, ValueError, KeyError):
                     skipped += 1
 
         return {
