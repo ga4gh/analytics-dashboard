@@ -69,7 +69,7 @@ class GithubRepos:
         )
 
         try:
-            record_id = self.record_repo.create_record(record_model)
+            record_id = self.record_repo.insert(record_model)
             logger.info(f"Created record id {record_id} for repo {repo_request.name}")
         except Exception as e:
             logger.exception("Failed to create record for repo; aborting repo creation.")

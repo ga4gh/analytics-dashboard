@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
-from services.pypi import Pypi as PypiService
-from models.pypi import (
+from src.services.pypi import Pypi as PypiService
+from src.models.pypi import (
     TotalPackagesResponse,
     ReleasesByYearResponse,
     PackageRepoRatioResponse,

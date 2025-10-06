@@ -1,4 +1,4 @@
-from models.pypi import (
+from src.models.pypi import (
     ReleasesByYearResponse,
     ReleasesByYearItem,
     PackageVersions,
