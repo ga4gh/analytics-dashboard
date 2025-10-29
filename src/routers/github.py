@@ -27,6 +27,13 @@ class GithubRepoRouter:
                 raise HTTPException(status_code=404, detail="No repo found with that name")
             return repo
 
+        @self.router.get("/github/owner/{owner}", response_model=List[GithubRepo])
+        async def get_repos_by_owner(owner: str) -> List[GithubRepo]:
+            repo = self.github_service.get_repos_by_owner(owner)
+            if not repo:
+                raise HTTPException(status_code=404, detail="No repo found with that name")
+            return repo
+
         @self.router.post("/github")
         async def create_repo(repo: GithubRepoRequest, user: str = Header(...)) -> Response:
             self.github_service.create_repo(repo, user)

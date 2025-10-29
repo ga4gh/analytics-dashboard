@@ -40,16 +40,21 @@ logger.setLevel(logging.INFO)
 
 
 class GithubRepos:
-    def __init__(self, repo: GhRepo, repo_client: GithubRepoClient, record_repo: RecordRepo):
+    def __init__(
+        self, 
+        repo: GhRepo, 
+        repo_client: GithubRepoClient, 
+        record_repo: RecordRepo
+    ) -> None:
         self.github_repo = repo
         self.repo_client = repo_client
         self.record_repo = record_repo
 
     def get_repo_by_id(self, repo_id: int) -> Optional[GithubRepoModel]:
-        return self.github_repo.get_repo_by_id(repo_id)
+        return self.github_repo.get_by_id(repo_id)
 
     def get_repo_by_name(self, name: str) -> List[GithubRepoModel]:
-        return self.github_repo.get_repo_by_name(name)
+        return self.github_repo.get_by_name(name)
 
     def create_repo(self, repo_request: GithubRepoRequest, user: str) -> GithubRepoModel:
         
@@ -99,7 +104,7 @@ class GithubRepos:
             updated_by=user,
             version=1,
         )
-        self.github_repo.create_repo(complete_repo_model)
+        self.github_repo.insert(complete_repo_model)
         return complete_repo_model
 
     def update_repo(self, repo_id: int, updates: Dict[str, Any], user: str) -> Optional[GithubRepoModel]:
@@ -108,7 +113,7 @@ class GithubRepos:
         that correspond to model_dump keys).
         Returns the updated model (re-query) or None if not found.
         """
-        existing = self.github_repo.get_repo_by_id(repo_id)
+        existing = self.github_repo.get_by_id(repo_id)
         if not existing:
             return None
 
@@ -116,11 +121,11 @@ class GithubRepos:
         updates.setdefault("updated_at", datetime.now())
         updates.setdefault("updated_by", user)
 
-        self.github_repo.update_repo(repo_id, updates)
-        return self.github_repo.get_repo_by_id(repo_id)
+        self.github_repo.update(repo_id, updates)
+        return self.github_repo.get_by_id(repo_id)
 
-    def sync_repos(self, user: str) -> List[GithubRepoModel]:
-        repos_data = self.repo_client.get_gh_repos()
+    def sync_repos(self, user: str, org: str) -> List[GithubRepoModel]:
+        repos_data = self.repo_client.get_repos_by_org(org)
         return self.sync_from_json(repos_data, user)
 
     def sync_from_json(self, repos_data: List[Dict[str, Any]], user: str) -> List[GithubRepoModel]:
@@ -130,7 +135,7 @@ class GithubRepos:
         """
         synced_repos = []
         for repo in repos_data:
-            existing = self.github_repo.get_repo_by_name(repo["name"])
+            existing = self.github_repo.get_by_name(repo["name"])
             if existing:
                 logger.info(f"Repo {repo['name']} already exists, skipping.")
                 continue
@@ -180,7 +185,7 @@ class GithubRepos:
         except Exception:
             branch_count = 0
 
-        existing = self.github_repo.get_repo_by_name(repo["name"])
+        existing = self.github_repo.get_by_name(repo["name"])
         repo_request = GithubRepoRequest(
             name=repo["name"],
             repo_link=repo.get("html_url", ""),
@@ -209,8 +214,8 @@ class GithubRepos:
             updates.pop("created_by", None)
             # find DB id:
             db_id = existing[0].id
-            self.github_repo.update_repo(db_id, updates)
-            return self.github_repo.get_repo_by_id(db_id)
+            self.github_repo.update(db_id, updates)
+            return self.github_repo.get_by_id(db_id)
         else:
             logger.info(f"Creating new repo {repo['name']}")
             created = self.create_repo(repo_request, user)

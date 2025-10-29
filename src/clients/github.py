@@ -4,19 +4,38 @@ from src.config import constants
 
 
 class GithubRepoClient:
-    def __init__(self, base_url: str, api_key: str, org: str):
+    def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
-        self.org = org
 
     def _headers(self):
         return {"x-api-key": self.api_key} if self.api_key else {}
 
-    def get_gh_repos(self) -> List[Dict[str, Any]]:
+    def get_repos_by_org(self, org: str) -> List[Dict[str, Any]]:
         """
         Return all repos for the configured organization using GitHub pagination.
         """
-        url = f"{self.base_url}/orgs/{self.org}/repos"
+        url = f"{self.base_url}/orgs/{org}/repos"
+        headers = self._headers()
+        params = {"per_page": 100, "page": 1}
+
+        all_repos: List[Dict[str, Any]] = []
+        while True:
+            resp = requests.get(url, headers=headers, params=params, timeout=120)
+            resp.raise_for_status()
+            page = resp.json()
+            all_repos.extend(page)
+            if "next" not in resp.links:
+                break
+            params["page"] += 1
+
+        return all_repos
+
+    def get_repos_by_keyword(self, keyword: str) -> int:
+        """
+        Return the total number of branches for a repository (uses pagination).
+        """
+        url = f"{self.base_url}/search/repositories?q={keyword}"
         headers = self._headers()
         params = {"per_page": 100, "page": 1}
 
@@ -54,6 +73,8 @@ class GithubRepoClient:
                 break
             params["page"] += 1
         return total_branches
+
+    
 
 
 class GithubEntityClient:

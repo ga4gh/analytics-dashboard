@@ -15,15 +15,17 @@ class GithubRepo:
         self.db = db
         self.sql_builder = sql_builder
 
-    def create_repo(self, githubRepo: GhRepoModel) -> None:
+    def insert(self, githubRepo: GhRepoModel) -> None:
         data = githubRepo.model_dump(exclude={"id"})
         query, values = self.sql_builder.build_insert(data)
 
         with self.db.get_connection() as conn, conn.cursor() as cur:
             cur.execute(query, values)
+            repo_id = cur.cur.fetchone()[0]
             conn.commit()
+            return repo_id
 
-    def update_repo(self, githubRepo_id: int, updates: Dict[str, Any]) -> None:
+    def update(self, githubRepo_id: int, updates: Dict[str, Any]) -> None:
         if not updates:
             return
         query, values = self.sql_builder.build_update(updates, githubRepo_id, "id")
@@ -32,7 +34,7 @@ class GithubRepo:
             cur.execute(query, values)
             conn.commit()
 
-    def get_repo_by_id(self, repo_id: int) -> Optional[GhRepoModel]:
+    def get_by_id(self, repo_id: int) -> Optional[GhRepoModel]:
         query = f"SELECT * FROM github_repos WHERE id = %s"
         with self.db.get_connection() as conn, conn.cursor() as cur:
             cur.execute(query, (repo_id,))
@@ -43,10 +45,38 @@ class GithubRepo:
                 return GhRepoModel(**data)
             return None
 
-    def get_repo_by_name(self, name: str) -> List[GhRepoModel]:
+    def get_by_name(self, name: str) -> List[GhRepoModel]:
         query = f"SELECT * FROM github_repos WHERE name = %s"
         with self.db.get_connection() as conn, conn.cursor() as cur:
             cur.execute(query, (name,))
+            rows = cur.fetchall()
+            if rows and cur.description:
+                columns = [desc[0] for desc in cur.description]
+                repos: List[GhRepoModel] = []
+                for row in rows:
+                    data = dict(zip(columns, row, strict=False))
+                    repos.append(GhRepoModel(**data))
+                return repos
+            return []
+    
+    def get_by_owner(self, owner: str) -> List[GhRepoModel]:
+        query = f"SELECT * FROM github_repos WHERE owner = %s"
+        with self.db.get_connection() as conn, conn.cursor() as cur:
+            cur.execute(query, (owner,))
+            rows = cur.fetchall()
+            if rows and cur.description:
+                columns = [desc[0] for desc in cur.description]
+                repos: List[GhRepoModel] = []
+                for row in rows:
+                    data = dict(zip(columns, row, strict=False))
+                    repos.append(GhRepoModel(**data))
+                return repos
+            return []
+    
+    def get_all_repos(self) -> List[GhRepoModel]:
+        query = f"SELECT * FROM github_repos"
+        with self.db.get_connection() as conn, conn.cursor() as cur:
+            cur.execute(query)
             rows = cur.fetchall()
             if rows and cur.description:
                 columns = [desc[0] for desc in cur.description]
