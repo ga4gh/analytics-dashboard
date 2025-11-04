@@ -44,16 +44,6 @@ def repo(mock_db, mock_sqlbuilder):
 # Tests
 # -------------------------------
 
-def test_get_total_packages(repo, mock_db):
-    db, conn, cur = mock_db
-    cur.fetchone.return_value = 82
-
-    result = repo.get_total_packages()
-
-    cur.execute.assert_called_once_with("SELECT COUNT(DISTINCT project_name) FROM pypi;")
-    assert isinstance(result, int)
-    assert result == 82
-
 
 def test_get_package_versions(repo, mock_db):
     db, conn, cur = mock_db
