@@ -1,11 +1,11 @@
-from models.pypi import (
+from src.models.pypi import (
     ReleasesByYearResponse,
     PackageRepoRatioResponse,
     PackageVersions,
     SourcesCoverageResponse,
     PypiDetails
 )
-from repositories.pypi import Pypi as PypiRepo
+from src.repositories.pypi import Pypi as PypiRepo
 
 class Pypi:
     def __init__(self, repo: PypiRepo) -> None:

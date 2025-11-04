@@ -1,11 +1,11 @@
 import uvicorn
 from fastapi import FastAPI
-from config.config import config
-from repositories import setup, sqlbuilder
-from routers.pypi import Pypi as PypiRouter
-from services.pypi import Pypi as PypiService
-from repositories.pypi import Pypi as PypiRepo
-from models.pypi import Pypi as PypiModel
+from src.config.config import config
+from src.repositories import setup, sqlbuilder
+from src.routers.pypi import Pypi as PypiRouter
+from src.services.pypi import Pypi as PypiService
+from src.repositories.pypi import Pypi as PypiRepo
+from src.models.pypi import Pypi as PypiModel
 from contextlib import asynccontextmanager
 
 def main() -> FastAPI:
