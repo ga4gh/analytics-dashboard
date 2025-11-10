@@ -1,23 +1,10 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Header, HTTPException, Query
-from pydantic import BaseModel
 
 from src.models.article import Article
+from src.models.pubmed_requests import InsertArticlesRequest, InsertArticlesResponse
 from src.services.pubmed import Pubmed as PubmedService
-
-
-# Request/Response models
-class InsertArticlesRequest(BaseModel):
-    keyword: str
-    pubmed_db: str = "pubmed"
-
-
-class InsertArticlesResponse(BaseModel):
-    processed: int
-    created: int
-    updated: int
-    skipped: int
 
 START_DATE_QUERY = Query(None, description="Start date (ISO format)")
 END_DATE_QUERY = Query(None, description="End date (ISO format), defaults to today")

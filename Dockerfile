@@ -25,5 +25,10 @@ COPY . .
 ############################  Expose API port
 EXPOSE 8000
 
+############################  Set environment variables
+ENV PYTHONPATH=/app
+ENV HOST=0.0.0.0
+ENV PORT=8000
+
 ############################  Start the FastAPI server
-CMD ["python", "-m", "src.main"]
+CMD ["uvicorn", "src.main:main", "--factory", "--host", "0.0.0.0", "--port", "8000"]
