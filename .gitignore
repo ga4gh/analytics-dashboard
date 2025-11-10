@@ -9,3 +9,6 @@
 terraform.tfstate**
 flyway.config
 .mypy_cache
+
+#virutal local env
+/pypi

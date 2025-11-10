@@ -14,8 +14,16 @@ from .repositories.record import Record as RecordRepo
 from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
 
+from config.config import config
+from repositories import setup, sqlbuilder
+from routers.pypi import Pypi as PypiRouter
+from services.pypi import Pypi as PypiService
+from repositories.pypi import Pypi as PypiRepo
+from models.pypi import Pypi as PypiModel
+from contextlib import asynccontextmanager
 
 def main() -> FastAPI:
+    app = FastAPI()
 
     # DB setup
     db_conn = setup.DatabaseConnection(config.database_url)
@@ -40,13 +48,22 @@ def main() -> FastAPI:
     pubmed_service = PubmedService(author_repo, record_repo, article_repo, pubmed_client)
 
     # Router setup
-    animals_router = PubmedRouter(pubmed_service)
+    pubmed_router = PubmedRouter(pubmed_service)
 
     app = FastAPI()
-    app.include_router(animals_router.router)
+    app.include_router(pubmed_router.router)
 
+
+    pypi_fields = set(PypiModel.model_fields.keys())
+    pypi_sql_builder = sqlbuilder.SQLBuilder("pypi").allow_fields(pypi_fields)
+    pypi_repo = PypiRepo(db_conn, pypi_sql_builder)
+    pypi_service = PypiService(pypi_repo)
+    pypi_router = PypiRouter(pypi_service)
+
+    app.include_router(pypi_router.router)
+        
     return app
 
 if __name__ == "__main__":
     app = main()
-    uvicorn.run(app, host=config.host, port=config.port, reload=config.debug)
+    uvicorn.run(app, host=config.host, port=config.port, reload=False)
