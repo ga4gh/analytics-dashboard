@@ -1,10 +1,11 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class Record(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     record_type: str
     source: str
@@ -13,6 +14,6 @@ class Record(BaseModel):
     created_at: datetime
     updated_by: str
     updated_at: datetime
-    deleted_by: Optional[str]
-    deleted_at: Optional[datetime]
+    deleted_by: str | None
+    deleted_at: datetime | None
     version: int

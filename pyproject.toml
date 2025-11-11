@@ -10,7 +10,9 @@ exclude = [
     "test_*.py",
     "tests/",
     "resources/",
-    "resources/**/*"
+    "resources/**/*",
+    "notebooks/",
+    "notebooks/**/*"
 ]
 
 [tool.ruff.lint]

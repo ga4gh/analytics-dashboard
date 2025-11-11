@@ -1,10 +1,10 @@
 from models.pypi import (
-    ReleasesByYearResponse,
-    ReleasesByYearItem,
     PackageVersions,
+    PypiDetails,
+    ReleasesByYearItem,
+    ReleasesByYearResponse,
     SourceCoverageItem,
     SourcesCoverageResponse,
-    PypiDetails
 )
 
 from .setup import DatabaseConnection
@@ -21,7 +21,7 @@ class Pypi:
             cur = conn.cursor()
             cur.execute("SELECT COUNT(DISTINCT project_name) FROM pypi;")
             return cur.fetchone()[0]
-        
+
     def get_package_versions(self) -> list[PackageVersions]:
         query = """
             SELECT pp.project_name AS package_name,
@@ -39,7 +39,7 @@ class Pypi:
                 for package_name, versions in rows:
                     results.append(PackageVersions(package_name=package_name, versions=versions))
         return results
-    
+
     def get_releases_over_years(self) -> ReleasesByYearResponse:
         query = """
             SELECT EXTRACT(YEAR FROM release_date)::INT AS year,
@@ -59,9 +59,9 @@ class Pypi:
                         items.append(ReleasesByYearItem(year=year, releases=releases))
 
         return ReleasesByYearResponse(releases_over_years=items)
-    
+
     def get_sources_coverage(self) -> SourcesCoverageResponse:
-        '''modify query to include other tables'''
+        """Modify query to include other tables"""
         query = """
             SELECT 
                 r.source,
@@ -94,7 +94,7 @@ class Pypi:
         response = SourcesCoverageResponse(coverages=items)
         print(response)
         return SourcesCoverageResponse(coverages=items)
-    
+
     def get_project_details(self) -> list[PypiDetails]:
         """
         Returns a list of PypiDetails: each package, its metadata, and version counts
@@ -145,4 +145,4 @@ class Pypi:
         return result
 
 
-            
+

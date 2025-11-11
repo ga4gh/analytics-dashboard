@@ -175,13 +175,13 @@ class Pubmed:
                 "link": link,
             }
         except (KeyError, TypeError, AttributeError, ValueError):
-            return { # noqa: TRY300
+            return {
                 "abstract": "",
                 "authors": None,
                 "status": "",
                 "link": "",
             }
-        
+
     def parse_abstract(self, article: dict) -> str | None:
         abstract_section = article.get("Abstract", {})
         if not abstract_section:
@@ -267,13 +267,13 @@ class Pubmed:
                 "authors": authors
             }
         except (KeyError, TypeError, AttributeError, ValueError):
-            return { # noqa: TRY300
+            return {
                 "abstract": "",
                 "status": "",
                 "link": "",
                 "authors": None
             }
-        
+
     def parse_pmc_abstract(self, article_meta: dict) -> str | None:
         abstract_section = article_meta.get("abstract", {})
         if isinstance(abstract_section, dict):

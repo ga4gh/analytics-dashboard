@@ -14,6 +14,7 @@ from .repositories.record import Record as RecordRepo
 from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
 
+
 def main() -> FastAPI:
 
     # DB setup
@@ -43,7 +44,7 @@ def main() -> FastAPI:
 
     app = FastAPI()
     app.include_router(pubmed_router.router)
-        
+
     return app
 
 if __name__ == "__main__":

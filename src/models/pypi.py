@@ -1,21 +1,22 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class Pypi(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     record_id: int
     project_name: str
     description: str
-    download_history: Optional[dict]
+    download_history: dict | None
     package_url: str
     project_url: str
     release_url: str
-    github_url: Optional[str]
-    author_name: Optional[str]
-    author_email: Optional[str]
+    github_url: str | None
+    author_name: str | None
+    author_email: str | None
     package_version: str
     is_latest: bool
     category: str
@@ -23,26 +24,26 @@ class Pypi(BaseModel):
     created_at: datetime
     updated_by: str
     updated_at: datetime
-    deleted_by: Optional[str]
-    deleted_at: Optional[datetime]
+    deleted_by: str | None
+    deleted_at: datetime | None
     version: int
-        
+
 class PypiVersion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
-    python_version: Optional[str]
+    python_version: str | None
     package_version: str
-    release_date: Optional[datetime]
+    release_date: datetime | None
     download_url: str
     created_by: str
     created_at: datetime
     updated_by: str
     updated_at: datetime
-    deleted_by: Optional[str]
-    deleted_at: Optional[datetime]
+    deleted_by: str | None
+    deleted_at: datetime | None
     version: int
-    
+
 class TotalPackagesResponse(BaseModel):
     total_packages: int
 
@@ -56,7 +57,7 @@ class ReleasesByYearItem(BaseModel):
 
 class ReleasesByYearResponse(BaseModel):
     releases_over_years: list[ReleasesByYearItem]
-    
+
 class SourceCoverageItem(BaseModel):
     source: str
     total_records: int
@@ -68,16 +69,16 @@ class SourcesCoverageResponse(BaseModel):
 
 class PackageRepoRatioResponse(BaseModel):
     package_repo_ratio_percent: float
-    
+
 class PypiDetails(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     project_name: str
-    description: Optional[str]
+    description: str | None
     package_url: str
     release_url: str
-    github_url: Optional[str]
-    author_name: Optional[str]
-    author_email: Optional[str]
+    github_url: str | None
+    author_name: str | None
+    author_email: str | None
     category: str
     versions: list[PackageVersions]

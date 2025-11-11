@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException, Response
-from services.pypi import Pypi as PypiService
+from fastapi import APIRouter
+
 from models.pypi import (
-    TotalPackagesResponse,
-    ReleasesByYearResponse,
-    PackageRepoRatioResponse,
     PackageVersions,
+    PypiDetails,
+    ReleasesByYearResponse,
     SourcesCoverageResponse,
-    PypiDetails
+    TotalPackagesResponse,
 )
+from services.pypi import Pypi as PypiService
+
 
 class Pypi:
     def __init__(self, pypi_service: PypiService):
@@ -20,23 +21,23 @@ class Pypi:
         async def get_total_packages():
             packages_count: int = self.pypi_service.get_total_packages()
             return TotalPackagesResponse(total_packages=packages_count)
-        
+
         @self.router.get("/pypi/package-versions", response_model=list[PackageVersions])
         async def get_package_versions():
             return self.pypi_service.get_package_versions()
-        
+
         @self.router.get("/pypi/releases-over-years", response_model=ReleasesByYearResponse)
         async def get_releases_over_years():
             return self.pypi_service.get_releases_over_years()
-        
+
         @self.router.get("/pypi/all_sources_coverage", response_model=SourcesCoverageResponse)
         async def get_sources_coverage() -> SourcesCoverageResponse:
             return self.pypi_service.get_sources_coverage()
-        
+
         @self.router.get("/pypi/project_details", response_model=list[PypiDetails])
         async def get_project_details():
             return self.pypi_service.get_project_details()
-        
-        '''@self.router.get("/pypi/package-repo-ratio", response_model=PackageRepoRatioResponse)
+
+        """@self.router.get("/pypi/package-repo-ratio", response_model=PackageRepoRatioResponse)
         def package_repo_ratio():
-            return get_package_repo_ratio(db)'''
+            return get_package_repo_ratio(db)"""
