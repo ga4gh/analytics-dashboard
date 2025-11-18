@@ -1,6 +1,12 @@
 import uvicorn
 from fastapi import FastAPI
 
+from .repositories import setup, sqlbuilder
+from .routers.pypi import Pypi as PypiRouter
+from .services.pypi import Pypi as PypiService
+from .repositories.pypi import Pypi as PypiRepo
+from .models.pypi import Pypi as PypiModel
+
 from .clients import pubmed
 from .config import constants
 from .config.config import config
@@ -14,12 +20,6 @@ from .repositories.record import Record as RecordRepo
 from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
 
-from config.config import config
-from repositories import setup, sqlbuilder
-from routers.pypi import Pypi as PypiRouter
-from services.pypi import Pypi as PypiService
-from repositories.pypi import Pypi as PypiRepo
-from models.pypi import Pypi as PypiModel
 from contextlib import asynccontextmanager
 
 def main() -> FastAPI:
