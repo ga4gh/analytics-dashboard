@@ -1,0 +1,1 @@
+DROP TYPE IF EXISTS article_status;

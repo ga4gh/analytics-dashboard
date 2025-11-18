@@ -69,12 +69,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
+          curl -fsSL https://get.docker.com | sh
           
       - name: Run database migrations
         env:
-          DATABASE_URL: ${{ needs.terraform.outputs.database_url }}
+          DATABASE_URL: ${{ needs.terraform.outputs.database_url || secrets.DATABASE_URL }}
+          GITHUB_ACTIONS: true
         run: |
           chmod +x sql/migrate.sh
-          cd sql && ./migrate.sh up
+          bash sql/migrate.sh up
