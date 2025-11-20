@@ -1,0 +1,69 @@
+body:
+  - type: markdown
+  attributes:
+      value: |
+        # Pull Request Submission Form
+        
+        Welcome! This form helps you submit pull requests to the GA4GH Tech Team.
+        
+        **Before you begin:**
+        - Ensure you have reviewed the pull request
+        - Have a associated GitHub Issue(s) ready
+
+        ---
+
+- type: input
+    id: pr-title
+    attributes:
+      label: PR Title
+      description: Provide a clear, concise title for your pull request
+      placeholder: "e.g., Pull request for.. "
+    validations:
+      required: true
+- type: dropdown
+    id: request-type
+    attributes:
+      label: PR type
+      description: What does this pull request achieve?
+      options:
+        - Fix
+        - Feature
+        - Refactor
+    validations:
+      required: true
+- type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Description of the pull request
+      placeholder: |
+         Describe the intent of the pull request, and what are the associated risks 
+    validations:
+      required: true
+- type: textarea
+    id: change_info
+    attributes:
+      label: Change information
+      description: Files, etc. changed
+      placeholder: |
+         List out the changes to be merged
+    validations:
+      required: true
+- type: textarea
+    id: test_info
+    attributes:
+      label: Steps to test
+      description: Testing information
+      placeholder: |
+         List out the tests
+    validations:
+      required: true
+- type: input
+    id: gh_issue
+    attributes:
+      label: GitHub Issue
+      description: Issue #
+      placeholder: 
+    validations:
+      required: true
+      
