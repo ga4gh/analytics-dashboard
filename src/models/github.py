@@ -27,6 +27,7 @@ class GithubRepo(BaseModel):
     updated_at: datetime
     updated_by: str
     version: int
+    created_on: datetime
 
 
 class GithubRepoRequest(BaseModel):
@@ -46,6 +47,7 @@ class GithubRepoRequest(BaseModel):
     network_count: int
     subscribers_count: int
     branches_count: int
+    created_on: datetime
 
 
 class GithubEntity(BaseModel):

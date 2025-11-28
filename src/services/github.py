@@ -56,6 +56,12 @@ class GithubRepos:
     def get_repo_by_name(self, name: str) -> List[GithubRepoModel]:
         return self.github_repo.get_by_name(name)
 
+    def get_repos_by_owner(self, owner: str) -> List[GithubRepoModel]:
+        return self.github_repo.get_by_owner(owner)
+
+    def get_repos(self) -> List[GithubRepoModel]:
+        return self.github_repo.get_all_repos()
+
     def create_repo(self, repo_request: GithubRepoRequest, user: str) -> GithubRepoModel:
         
         record_model = RecordModel(
