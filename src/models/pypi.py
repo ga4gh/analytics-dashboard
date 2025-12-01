@@ -8,7 +8,7 @@ class Pypi(BaseModel):
     id: int
     record_id: int
     project_name: str
-    description: str
+    description:  Optional[str] = None
     download_history: Optional[dict]
     package_url: str
     project_url: str
@@ -25,7 +25,7 @@ class Pypi(BaseModel):
     updated_at: datetime
     deleted_by: Optional[str]
     deleted_at: Optional[datetime]
-    version: int
+    version: Optional[int] = None
         
 class PypiVersion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -81,3 +81,17 @@ class PypiDetails(BaseModel):
     author_email: Optional[str]
     category: str
     versions: list[PackageVersions]
+    
+class AllPackages(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    package: Pypi
+    version: PypiVersion
+    
+class FirstRelease(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    project_name: str
+    version: str
+    release_date: datetime
+    
