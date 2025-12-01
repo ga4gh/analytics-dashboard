@@ -130,8 +130,8 @@ class GithubRepos:
         self.github_repo.update(repo_id, updates)
         return self.github_repo.get_by_id(repo_id)
 
-    def sync_repos(self, user: str, org: str) -> List[GithubRepoModel]:
-        repos_data = self.repo_client.get_repos_by_org(org)
+    def sync_repos(self, user: str) -> List[GithubRepoModel]:
+        repos_data = self.repo_client.get_repos_by_org("ga4gh")
         return self.sync_from_json(repos_data, user)
 
     def sync_from_json(self, repos_data: List[Dict[str, Any]], user: str) -> List[GithubRepoModel]:

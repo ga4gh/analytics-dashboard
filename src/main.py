@@ -1,21 +1,23 @@
-# main.py
-import os
 import logging
+import os
+from src.repositories import sqlbuilder
+
 import uvicorn
 from fastapi import FastAPI
 
+# clients / repos / services / routers
+from src.clients.github import GithubRepoClient
 # config
 from src.config.config import config
 from src.config.constants import GH_BASE_URL
-
-# clients / repos / services / routers
-from src.clients.github import GithubRepoClient
-from src.repositories.github import GithubRepo
 from src.repositories import setup
-from src.services.github import GithubRepos as GithubReposService
-from src.routers.github import GithubRepoRouter
-
+from src.repositories.github import GithubRepo
 from src.repositories.record import Record as RecordRepo
+from src.routers.github import GithubRepoRouter
+from src.services.github import GithubRepos as GithubReposService
+from src.repositories.sqlbuilder import SQLBuilder
+from src.models.github import GithubRepo as GithubRepoModel
+from src.models.record import Record as RecordModel
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -33,24 +35,20 @@ def main() -> FastAPI:
 
     # --- GitHub client + service setup
     gh_api_key = os.getenv("GITHUB_API_KEY", "")
-    gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
+    #gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
 
-    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key, gh_org)
-    gh_repo = GithubRepo(db_conn, table_name="github_repos")
+    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key)
+    github_repo_fields = set(GithubRepoModel.model_fields.keys())
+    gh_sql_builder = sqlbuilder.SQLBuilder("github_repos").allow_fields(github_repo_fields)
+    gh_repo = GithubRepo(db_conn, gh_sql_builder)
     print("record repo")
-    record_repo = RecordRepo(db_conn, table_name="records")
-    gh_service = GithubReposService(gh_repo, gh_client, record_repo)
-    gh_router = GithubRepoRouter(gh_service)
+    record_repo_fields = set(RecordModel.model_fields.keys())
+    record_sql_builder = sqlbuilder.SQLBuilder("records").allow_fields(record_repo_fields)
+    record_repo = RecordRepo(db_conn, record_sql_builder)
 
-    # Optionally sync repos once at startup
-    # The service.sync_repos expects a `user` string (created_by/updated_by).
-    sync_user = os.getenv("GITHUB_SYNC_USER", "system")
-    try:
-        logger.info("Starting GitHub repos sync...")
-        synced = gh_service.sync_repos(sync_user)
-        logger.info("GitHub sync completed. %d repos synced.", len(synced))
-    except Exception as e:
-        logger.exception("GitHub sync failed: %s", e)
+
+    gh_service = GithubReposService(gh_repo, record_repo, gh_client)
+    gh_router = GithubRepoRouter(gh_service)
 
     # --- FastAPI app + router
     app = FastAPI()
