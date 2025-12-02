@@ -142,7 +142,7 @@ def test_get_repos_by_owner_404(app_client):
     resp = client.get("/github/owner/ghost")
     assert resp.status_code == 404
     # Note: message reuses "name" text even for owner, as in the router code
-    assert resp.json()["detail"] == "No repo found with that name"
+    assert resp.json()["detail"] == "No repos under that organization"
     assert ("get_repos_by_owner", "ghost") in service.calls
 
 

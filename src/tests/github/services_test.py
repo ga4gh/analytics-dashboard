@@ -72,7 +72,7 @@ class FakeRecordRepo:
         self.raise_exc = raise_exc
         self.created = []
 
-    def create_record(self, record_model):
+    def insert(self, record_model):
         if self.raise_exc:
             raise RuntimeError("record create failed")
         self.created.append(record_model)
@@ -383,11 +383,11 @@ def test_sync_repos_delegates_to_client_and_calls_sync_from_json(monkeypatch):
 
     monkeypatch.setattr(service, "sync_from_json", fake_sync_from_json)
 
-    out = service.sync_repos(user="sam", org="GA4GH")
+    out = service.sync_repos(user="sam")
     assert out == ["ok"]
     assert called["repos_data"] == client.repos
     assert called["user"] == "sam"
-    assert client.call_log["get_repos_by_org"] == ["GA4GH"]
+    assert client.call_log["get_repos_by_org"] == ["ga4gh"]
 
 
 def test_sync_single_repo_updates_existing(monkeypatch):
