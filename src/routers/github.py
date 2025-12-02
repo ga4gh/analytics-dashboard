@@ -13,6 +13,13 @@ class GithubRepoRouter:
 
     def _setup_routes(self) -> None:
 
+        @self.router.get("/github/all", response_model=List[GithubRepo])
+        async def get_repos() -> List[GithubRepo]:
+            repo = self.github_service.get_repos()
+            if not repo:
+                raise HTTPException(status_code=404, detail="No repos found")
+            return repo
+        
         @self.router.get("/github/{repo_id}", response_model=GithubRepo)
         async def get_repo(repo_id: int) -> GithubRepo:
             repo = self.github_service.get_repo_by_id(repo_id)
@@ -26,6 +33,13 @@ class GithubRepoRouter:
             if not repo:
                 raise HTTPException(status_code=404, detail="No repo found with that name")
             return repo
+
+        @self.router.get("/github/owner/{owner}", response_model=List[GithubRepo])
+        async def get_repos_by_owner(owner: str) -> List[GithubRepo]:
+            repo = self.github_service.get_repos_by_owner(owner)
+            if not repo:
+                raise HTTPException(status_code=404, detail="No repos under that organization")
+            return repo       
 
         @self.router.post("/github")
         async def create_repo(repo: GithubRepoRequest, user: str = Header(...)) -> Response:

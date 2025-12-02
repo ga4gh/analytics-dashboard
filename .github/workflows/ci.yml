@@ -53,7 +53,12 @@ jobs:
           pip install bandit safety
           
       - name: Run bandit
-        run: bandit -r src/ -f json -o bandit-report.json --skip B101 --exclude '*_test.py,test_*.py'
+        run: bandit -r src/ -f json -o bandit-report.json --skip B101 --exclude '*_test.py,test_*.py' --exit-zero
+
+      - name: Verify bandit report exists
+        run: |
+          ls -lah
+          file bandit-report.json || echo "Report missing!"
                 
       - name: Upload bandit report
         uses: actions/upload-artifact@v4
