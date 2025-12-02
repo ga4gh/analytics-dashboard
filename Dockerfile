@@ -3,27 +3,38 @@ FROM python:3.13-bookworm AS base
 # Fail fast if any command errors
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-############################  System dependencies
-RUN apt-get update         \
+############################
+# System dependencies
+############################
+RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential \
- && apt-get clean          \
+ && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-############################  Set work directory
+############################
+# Set work directory
+############################
 WORKDIR /app
 
-############################  Copy Python deps separately for better caching
+############################
+# Install Python dependencies
+############################
 COPY requirements.txt .
 
-# Upgrade pip first, then install deps
 RUN pip install --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
-############################  Copy application code
+############################
+# Copy application code
+############################
 COPY . .
 
-############################  Expose API port
+############################
+# Expose API port
+############################
 EXPOSE 8000
 
-############################  Start the FastAPI server
-CMD ["python", "-m", "src.main"]
+############################
+# Start FastAPI (production-friendly)
+############################
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
