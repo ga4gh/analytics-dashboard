@@ -7,7 +7,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    steps: # TODO: maybe add mypy for type checking
+    steps: 
       - uses: actions/checkout@v4
       
       - name: Set up Python

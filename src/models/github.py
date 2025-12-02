@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class GithubRepo(BaseModel):
-    id: int
+    id: Optional[int] = None
     record_id: int
     name: str
     repo_link: str
@@ -51,7 +51,7 @@ class GithubRepoRequest(BaseModel):
 
 
 class GithubEntity(BaseModel):
-    id: int
+    id: Optional[int] = None
     name: str
     user_id: str
     company: Optional[str] = None
@@ -75,7 +75,7 @@ class GithubEntityRequest(BaseModel):
 
 
 class GithubEntityAction(BaseModel):
-    id: int
+    id: Optional[int] = None
     repo_id: int
     action_type: str
     user_id: str
@@ -93,7 +93,7 @@ class GithubEntityActionRequest(BaseModel):
 
 
 class GithubArchivedStat(BaseModel):
-    id: int
+    id: Optional[int] = None
     repo_id: int
     weekly_commit_add: int
     weekly_commit_del: int

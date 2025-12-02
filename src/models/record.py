@@ -29,11 +29,11 @@ class Record(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | None = None
-    
+
     record_type: RecordType
     source: Source
     status: Status = Status.PENDING
-    keyword: List[str] 
+    keyword: list[str]
     product_line: ProductType | None = None
 
     created_at: datetime = Field(default_factory=datetime.now)

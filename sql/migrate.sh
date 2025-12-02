@@ -42,6 +42,7 @@ if [[ "$CMD" == "down" ]]; then
     -database="$DATABASE_URL" \
     down 1
 else
+  echo "Running: docker run --rm $NETWORK -v \"$SCRIPT_DIR/migrations:/migrations\" migrate/migrate -path=/migrations -database=\"$DATABASE_URL\" \"$CMD\""
   docker run --rm \
     $NETWORK \
     -v "$SCRIPT_DIR/migrations:/migrations" \
