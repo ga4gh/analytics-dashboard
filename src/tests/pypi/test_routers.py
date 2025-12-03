@@ -71,7 +71,7 @@ def test_get_releases_over_years(client, mock_service):
 def test_get_sources_coverage(client, mock_service):
     mock_service.get_sources_coverage.return_value = SourcesCoverageResponse(coverages=[])
 
-    response = client.get("/pypi/all_sources_coverage")
+    response = client.get("/pypi/all-sources-coverage")
 
     assert response.status_code == 200
     data = response.json()
@@ -94,7 +94,7 @@ def test_get_project_details(client, mock_service):
         )
     ]
 
-    response = client.get("/pypi/project_details")
+    response = client.get("/pypi/project-details")
 
     assert response.status_code == 200
     data = response.json()
