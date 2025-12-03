@@ -1,6 +1,24 @@
+# main.py
+import os
+import logging
 import uvicorn
 from fastapi import FastAPI
 
+# config
+from .config.constants import GH_BASE_URL
+
+# clients / repos / services / routers
+from .clients.github import GithubRepoClient
+from .repositories.github import GithubRepo as GithubRepoRepository
+from .repositories import setup
+from .services.github import GithubRepos as GithubReposService
+from .routers.github import GithubRepoRouter
+from .models.github import GithubRepo
+
+from src.repositories.record import Record as RecordRepo
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 from .repositories import setup, sqlbuilder
 from .routers.pypi import Pypi as PypiRouter
 from .services.pypi import Pypi as PypiService
@@ -28,7 +46,8 @@ def main() -> FastAPI:
     # DB setup
     db_conn = setup.DatabaseConnection(config.database_url)
     db_conn.connect()
-
+    logger.info("Database connected")
+        
     record_fields = set(Record.model_fields.keys())
     record_sql_builder = sqlbuilder.SQLBuilder("records").allow_fields(record_fields - {"id"})
     record_repo = RecordRepo(db_conn, record_sql_builder)
@@ -50,7 +69,30 @@ def main() -> FastAPI:
     # Router setup
     pubmed_router = PubmedRouter(pubmed_service)
 
-    app = FastAPI()
+    # --- GitHub client + service setup
+    gh_api_key = os.getenv("GITHUB_API_KEY", "")
+    gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
+
+    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key, gh_org)
+
+    gh_repo_fields = set(GithubRepo.model_fields.keys())
+    gh_repo_sql_builder = sqlbuilder.SQLBuilder("github_repos").allow_fields(gh_repo_fields - {"id"})
+    gh_repo = GithubRepoRepository(db_conn, gh_repo_sql_builder)
+    gh_service = GithubReposService(gh_repo, gh_client, record_repo)
+    gh_router = GithubRepoRouter(gh_service)
+
+    # Optionally sync repos once at startup
+    # The service.sync_repos expects a `user` string (created_by/updated_by).
+    sync_user = os.getenv("GITHUB_SYNC_USER", "system")
+    try:
+        logger.info("Starting GitHub repos sync...")
+        synced = gh_service.sync_repos(sync_user)
+        logger.info("GitHub sync completed. %d repos synced.", len(synced))
+    except Exception as e:
+        logger.exception("GitHub sync failed: %s", e)
+
+    # --- FastAPI app + router
+    app.include_router(gh_router.router)
     app.include_router(pubmed_router.router)
 
 
@@ -63,6 +105,7 @@ def main() -> FastAPI:
     app.include_router(pypi_router.router)
         
     return app
+
 
 if __name__ == "__main__":
     app = main()

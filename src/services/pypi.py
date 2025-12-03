@@ -1,9 +1,10 @@
 from src.models.pypi import (
+    AllPackages,
     ReleasesByYearResponse,
-    PackageRepoRatioResponse,
     PackageVersions,
     SourcesCoverageResponse,
-    PypiDetails
+    PypiDetails,
+    FirstRelease
 )
 from src.repositories.pypi import Pypi as PypiRepo
 
@@ -25,3 +26,9 @@ class Pypi:
     
     def get_project_details(self) -> list[PypiDetails]:
         return self.pypi_repo.get_project_details()
+    
+    def get_first_releases(self) -> list[FirstRelease]:
+        return self.pypi_repo.get_first_releases()
+    
+    def get_all_packages(self) -> list[AllPackages]:
+        return self.pypi_repo.get_all_packages()
