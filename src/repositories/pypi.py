@@ -77,8 +77,8 @@ class Pypi:
                 ) AS coverage_percent
             FROM records r
             LEFT JOIN pypi p ON (r.id = p.record_id AND r.source = 'PyPi')
-            -- LEFT JOIN github g ON (r.id = g.record_id AND r.source = 'Github')
-            -- LEFT JOIN pubmed m ON (r.id = m.record_id AND r.source = 'PubMed')
+            LEFT JOIN github g ON (r.id = g.record_id AND r.source = 'Github')
+            LEFT JOIN pubmed m ON (r.id = m.record_id AND r.source = 'PubMed')
             GROUP BY r.source
             ORDER BY r.source;
         """
