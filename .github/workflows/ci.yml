@@ -131,3 +131,17 @@ jobs:
       - name: Run tests
         run: |
           docker run --rm analytics-dashboard:test pytest --cov=src --cov-report=xml
+
+      # Upload coverage XML as artifact
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      # Upload HTML coverage report as artifact
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-html
+          path: htmlcov
