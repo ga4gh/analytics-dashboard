@@ -45,7 +45,8 @@ Sources (will expand):
 ## 📚 Getting Started
 The dashboard is currently in the form of Jupyter notebooks. The notebook can be accessed [here](https://github.com/ga4gh/analytics-dashboard/blob/main/notebooks/Analytics_Dashboard.ipynb). It would be helpful if you have a GitHub ID although, this project is open access so ID isn't mandatory. The notebook runs on most of the user system platforms such as Windows, Mac, Linux, etc. The notebook also takes care of the libraries necessary to run the data visualisation. In the notebook, you can modify visualization types, styling, and data presented. However, note that this requires knowledge of Plotly and Dash libraries. 
 
-<font color="red">**Data in this current notebook version were last fetched between 1st October (GitHub and PyPi) and 1st December (PubMed) 2025.**</font>
+> [!IMPORTANT]
+> **Data in this current notebook version were last fetched between 1st October (GitHub and PyPi) and 1st December (PubMed) 2025.**
 
 In case you encounter issues in accessing the notebook or running it, please raise it with the team as detailed in the [contribute](#contribute) section.  
 
@@ -91,9 +92,9 @@ All the key decisions are available [here](https://github.com/ga4gh/analytics-da
 We've made every effort to implement all the main aspects of the data from the sources in the best possible way. However, the development journey doesn't end here, and your input is crucial for our continuous improvement.
 
 > [!IMPORTANT]
-> We welcome your ideas, feedback and comments to improve the dashboard! Whether you have feedback on features, have encountered any bugs, or have suggestions for enhancements, we're eager to hear from you. Your insights help us make the analytics dashboard more robust and user-friendly.
+> We welcome your ideas, feedback and comments to improve the dashboard! Whether you have feedback on features, have encountered any bugs, or have suggestions for enhancements, we're eager to hear from you. Your insights help us make the analytics dashboard more robust and user-friendly. Ideas for data or visualisations you'd like to see, can be shared with us till **15th January 2026** for showcase at GA4GH Connect 2026. 
 
-There are two ways to contribute
+You can create an [issue](https://github.com/ga4gh/analytics-dashboard/issues) using one of the templates available. This will be reviewed and once approved, will be developed in a new branch. After the development and testing is completed, the branch (and the changes suggested through it) will be reviewed through a pull request (PR). PR will be reviewed and merged into `main`. All branches are deleted after merge. 
 
 ---
 
