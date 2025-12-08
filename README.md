@@ -59,7 +59,7 @@ To run the Notebook on Google Colab (no installation required)
 >[!TIP]
 >A GitHub account and authorisation shared with Colab would be required
 
-- Click the <a>![Google Colab](colab.png)</a> button at the very top of this notebook
+- Click the "**Open in Colab**" button at the very top of this notebook
 - Click "**Run All**" to execute the full notebook end to end
 - Wait for results as it might take a couple of minutes for the notebook to fetch the data and create the analytics
 - Scroll through the results - Each section provides different insights
