@@ -20,7 +20,3 @@ issue_templates:
     title: "[General]: "
     labels: ["general"]
     body: "./ISSUE_TEMPLATE/general_report.md"
-contact_links:
-  - name: 🐞 Bug Report
-    url: https://github.com/ga4gh/analytics-dashboard/new/main/.github/ISSUE_TEMPLATE/bug.yml
-    about: Please file a bug/issue report.
