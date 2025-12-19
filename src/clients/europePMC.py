@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 import requests
 import pandas as pd
 from pathlib import Path
+import os
+import xmltodict
 
 
 class EuropePMC:
@@ -17,6 +19,7 @@ class EuropePMC:
         articles_authors = []
         affiliations = []
         temp_affiliations = []
+        citations = []
         json_response = self.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
 
@@ -53,6 +56,9 @@ class EuropePMC:
                 "Firstpublicationdate": article.get("firstPublicationDate"),
             }
             articles.append(data)
+
+            citations = self.create_citation(article.get("id"), citations)
+
             id += 1
             author_order = 1
             for author in (article.get("authorList").get("author")):
@@ -72,8 +78,9 @@ class EuropePMC:
         authors_df = pd.DataFrame(authors)
         articles_authors_df = pd.DataFrame(articles_authors)
         affiliations_df = pd.DataFrame(affiliations)
+        citations_df = pd.DataFrame(citations)
 
-        return articles_df, authors_df, articles_authors_df, affiliations_df
+        return articles_df, authors_df, articles_authors_df, affiliations_df, citations_df
 
     def create_author(self, author_data, authors: list):
         author = {
@@ -131,10 +138,12 @@ class EuropePMC:
         fulltexts.append(fulltext)
         return fulltexts
 
-    def create_citation(self, article_data, citation_data, citations: list):
+    def create_citation(self, pmid, citations: list):
+        citation_data = self.get_json(self.base_url, self.get_citations_endpoint(pmid))
+
         citation = {
             "id": "",
-            "article_id": article_data.get("id") or article_data.get("pmid"),
+            "article_id": pmid,
             "citation_id": citation_data.get("citationId") or citation_data.get("citation_id"),
             "source": citation_data.get("source"),
             "citation_type": citation_data.get("citationType") or citation_data.get("citation_type"),
@@ -166,10 +175,6 @@ class EuropePMC:
 
     def get_articles(self, keyword):
         json_response = self.get_json(self.base_url, self.get_articles_endpoint(keyword))        
-        return json_response
-
-    def get_citations(self, id):
-        json_response = self.get_json(self.base_url, self.get_citations_endpoint(id))
         return json_response
 
     def get_references(self, id):
@@ -205,7 +210,10 @@ class EuropePMC:
         while True:
             resp = requests.get(url, headers=headers, params=params, timeout=30)
             resp.raise_for_status()
-            data = resp.json()
+            try:
+                data = resp.json()
+            except ValueError:
+                data = xmltodict.parse(resp.text)
 
             if not isinstance(data, list):
                 return data
@@ -232,7 +240,9 @@ class EuropePMC:
 
 pmc = EuropePMC()
 tables = pmc.create_tables("ga4gh")
-pmc.write_df_to_csv(tables[0], "/Users/cchen/Documents/Workspace/analytics-dashboard/src/clients/test_articles.csv")
-pmc.write_df_to_csv(tables[1], "/Users/cchen/Documents/Workspace/analytics-dashboard/src/clients/test_authors.csv")
-pmc.write_df_to_csv(tables[2], "/Users/cchen/Documents/Workspace/analytics-dashboard/src/clients/test_articles_authors.csv")
-pmc.write_df_to_csv(tables[3], "/Users/cchen/Documents/Workspace/analytics-dashboard/src/clients/test_affiliations.csv")
+current_directory = os.getcwd()
+pmc.write_df_to_csv(tables[0], current_directory + "/test_articles.csv")
+pmc.write_df_to_csv(tables[1], current_directory + "/test_authors.csv")
+pmc.write_df_to_csv(tables[2], current_directory + "/test_articles_authors.csv")
+pmc.write_df_to_csv(tables[3], current_directory + "/test_affiliations.csv")
+pmc.write_df_to_csv(tables[4], current_directory + "/test_citations.csv")
