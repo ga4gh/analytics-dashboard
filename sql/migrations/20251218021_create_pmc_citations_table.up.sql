@@ -23,3 +23,5 @@ CREATE TABLE IF NOT EXISTS citations (
 
 CREATE INDEX IF NOT EXISTS idx_citations_article_id ON citations(article_id);
 CREATE INDEX IF NOT EXISTS idx_citations_citation_id ON citations(citation_id);
+CREATE INDEX IF NOT EXISTS idx_citations_citation_count ON citations(citation_count);
+CREATE INDEX IF NOT EXISTS idx_citations_pub_year ON citations(pub_year);
