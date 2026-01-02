@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS pmc_authors (
     lastname VARCHAR(128),
     initials VARCHAR(32),
     orcid VARCHAR(64),
+    author_order INTEGER NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by VARCHAR(64),
