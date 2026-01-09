@@ -20,48 +20,25 @@ class EuropePMC:
         affiliations = []
         temp_affiliations = []
         citations = []
+        references = []
+        grants = []
+        fulltext = []
+
         json_response = self.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
 
         id = 10000
         for article in results:
-            data = {
-                "id": id,
-                "record_id": id,
-                "Source": article.get("source"),
-                "Pm_id": article.get("id") or article.get("pmid"),
-                "Pmc_id": article.get("pmcid"),
-                "Full_text_id": "",
-                "Doi": article.get("doi"),
-                "Title": article.get("title"),
-                "Pub_year": article.get("pubYear"),
-                "Abstract_text": article.get("abstractText"),
-                "Affiliation": article.get("affiliation"),
-                "Publicication_status": article.get("publicationStatus"),
-                "Language": article.get("language"),
-                "Pub_type": (article.get("pubTypeList") or {}).get("pubType"),
-                "Is_open_access": bool(article.get("isOpenAccess")),
-                "inEPMC": bool(article.get("inEPMC")),
-                "inPMC": bool(article.get("inPMC")),
-                "hasPDF": bool(article.get("hasPDF")),
-                "hasBook": bool(article.get("hasBook")),
-                "hasSuppl": bool(article.get("hasSuppl")),
-                "Cited_by_count": article.get("citedByCount"),
-                "Has_references": bool(article.get("hasReferences")),
-                "Dateofcreation": article.get("dateOfCreation"),
-                "firstIndexdate": article.get("firstIndexDate"),
-                "Fulltextreceivedate": article.get("fullTextReceivedDate"),
-                "Revisiondate": article.get("dateOfRevision"),
-                "Epubdate": article.get("electronicPublicationDate"),
-                "Firstpublicationdate": article.get("firstPublicationDate"),
-            }
-            articles.append(data)
-
+            
+            articles = self.create_article(article, articles, id)
+            grants = self.create_grant(article, grants)
             citations = self.create_citation(article.get("id"), citations)
+            references = self.create_reference(article, references)
+            fulltext = self.create_fulltext(article, fulltext)
 
             id += 1
             author_order = 1
-            for author in (article.get("authorList").get("author")):
+            for author in (article.get("authorList") or {}).get("author") or []:
                 
                 authors = self.create_author(author, authors)
 
@@ -79,8 +56,45 @@ class EuropePMC:
         articles_authors_df = pd.DataFrame(articles_authors)
         affiliations_df = pd.DataFrame(affiliations)
         citations_df = pd.DataFrame(citations)
+        references_df = pd.DataFrame(references)
+        grants_df = pd.DataFrame(grants)
+        fulltext_df = pd.DataFrame(fulltext)
 
-        return articles_df, authors_df, articles_authors_df, affiliations_df, citations_df
+        return articles_df, authors_df, articles_authors_df, affiliations_df, citations_df, references_df, grants_df, fulltext_df
+
+    def create_article(self, article_data, articles: list, id):
+        data = {
+                "id": id,
+                "record_id": id,
+                "Source": article_data.get("source"),
+                "Pm_id": article_data.get("id"),
+                "Pmc_id": article_data.get("pmcid"),
+                "Full_text_id": "",
+                "Doi": article_data.get("doi"),
+                "Title": article_data.get("title"),
+                "Pub_year": article_data.get("pubYear"),
+                "Abstract_text": article_data.get("abstractText"),
+                "Affiliation": article_data.get("affiliation"),
+                "Publicication_status": article_data.get("publicationStatus"),
+                "Language": article_data.get("language"),
+                "Pub_type": (article_data.get("pubTypeList") or {}).get("pubType"),
+                "Is_open_access": bool(article_data.get("isOpenAccess")),
+                "inEPMC": bool(article_data.get("inEPMC")),
+                "inPMC": bool(article_data.get("inPMC")),
+                "hasPDF": bool(article_data.get("hasPDF")),
+                "hasBook": bool(article_data.get("hasBook")),
+                "hasSuppl": bool(article_data.get("hasSuppl")),
+                "Cited_by_count": article_data.get("citedByCount"),
+                "Has_references": bool(article_data.get("hasReferences")),
+                "Dateofcreation": article_data.get("dateOfCreation"),
+                "firstIndexdate": article_data.get("firstIndexDate"),
+                "Fulltextreceivedate": article_data.get("fullTextReceivedDate"),
+                "Revisiondate": article_data.get("dateOfRevision"),
+                "Epubdate": article_data.get("electronicPublicationDate"),
+                "Firstpublicationdate": article_data.get("firstPublicationDate"),
+            }
+        articles.append(data)
+        return articles
 
     def create_author(self, author_data, authors: list):
         author = {
@@ -139,39 +153,80 @@ class EuropePMC:
         return fulltexts
 
     def create_citation(self, pmid, citations: list):
-        citation_data = self.get_json(self.base_url, self.get_citations_endpoint(pmid))
+        citation_data = self.get_citations(pmid)
 
-        citation = {
-            "id": "",
-            "article_id": pmid,
-            "citation_id": citation_data.get("citationId") or citation_data.get("citation_id"),
-            "source": citation_data.get("source"),
-            "citation_type": citation_data.get("citationType") or citation_data.get("citation_type"),
-            "title": citation_data.get("title"),
-            "authors": citation_data.get("authors"),
-            "pub_year": citation_data.get("pubYear") or citation_data.get("pub_year"),
-            "citation_count": citation_data.get("citationCount") or citation_data.get("citation_count"),
-        }
-        citations.append(citation)
+        count = 1
+        for cite in (citation_data.get("citationList") or {}).get("citation") or []:
+            citation = {
+                "id": "",
+                "article_id": pmid,
+                "citation_id": cite.get("id"),
+                "source": cite.get("source"),
+                "citation_type": cite.get("citationType") or cite.get("citation_type"),
+                "title": cite.get("title"),
+                "authors": cite.get("authors"),
+                "pub_year": cite.get("pubYear") or cite.get("pub_year"),
+                "citation_count": count,
+            }
+            citations.append(citation)
+            count +=1
         return citations
 
-    def create_reference(self, article_data, reference_data, references: list):
-        reference = {
-            "id": "",
-            "article_id": article_data.get("id") or article_data.get("pmid"),
-            "reference_id": reference_data.get("referenceId") or reference_data.get("reference_id") or reference_data.get("referenceId"),
-            "source": reference_data.get("source"),
-            "citation_type": reference_data.get("citationType") or reference_data.get("citation_type"),
-            "title": reference_data.get("title"),
-            "authors": reference_data.get("authors"),
-            "pub_year": reference_data.get("pubYear") or reference_data.get("pub_year"),
-            "issn": reference_data.get("ISSN") or reference_data.get("issn"),
-            "essn": reference_data.get("ESSN") or reference_data.get("essn"),
-            "cited_order": reference_data.get("citedOrder") or reference_data.get("cited_order"),
-            "match": bool(reference_data.get("match")) if reference_data.get("match") is not None else None,
-        }
-        references.append(reference)
+    def create_reference(self, article_data, references: list):
+
+        response = self.get_references(article_data.get("id"))
+        reference_data = (response.get("referenceList") or {}).get("reference") or []
+
+        if isinstance(reference_data, dict):
+            reference_data = [reference_data]
+
+        for ref in reference_data:
+            reference = {
+                "id": "",
+                "article_id": article_data.get("id"),
+                "reference_id": ref.get("id"),
+                "source": ref.get("source"),
+                "citation_type": ref.get("citationType") or ref.get("citation_type"),
+                "title": ref.get("title"),
+                "authors": ref.get("authors"),
+                "pub_year": ref.get("pubYear") or ref.get("pub_year"),
+                "issn": ref.get("ISSN") or ref.get("issn"),
+                "essn": ref.get("ESSN") or ref.get("essn"),
+                "cited_order": ref.get("citedOrder") or ref.get("cited_order"),
+                "match": bool(ref.get("match")) if ref.get("match") is not None else None,
+            }
+            references.append(reference)
         return references
+
+    def create_grant(self, article_data, grants: list):
+
+        grant_data = (article_data.get("grantsList") or {}).get("grant") or []
+
+        for gr in grant_data:
+            grant = {
+                "id": "",
+                "article_id": article_data.get("id"),
+                "grant_id": gr.get("grantId"),
+                "agency": gr.get("agency"),
+            }
+            grants.append(grant)
+        return grants
+
+    def create_fulltext(self, article_data, fulltext: list):
+
+        fulltext_data = (article_data.get("fullTextUrlList") or {}).get("fullTextUrl") or []
+        for ft in fulltext_data:
+            text = {
+                "id": "",
+                "article_id": article_data.get("id"),
+                "availability": ft.get("availability"),
+                "availability_code": ft.get("availabilityCode"),
+                "document_style": ft.get("documentStyle"),
+                "site": ft.get("site"),
+                "url": ft.get("url"),
+            }
+            fulltext.append(text)
+        return fulltext
 
     def get_articles(self, keyword):
         json_response = self.get_json(self.base_url, self.get_articles_endpoint(keyword))        
@@ -181,52 +236,72 @@ class EuropePMC:
         json_response = self.get_json(self.base_url, self.get_references_endpoint(id))
         return json_response
 
-    def get_full_text(self, pmcid):
-        json_response = self.get_json(self.base_url, self.get_full_text_endpoint(pmcid))
+    def get_citations(self, pmcid):
+        json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid))
         return json_response
 
     def get_articles_endpoint(self, keyword):
         return f"search?query={keyword}&format=json&resultType=core"
 
     def get_citations_endpoint(self, id):
-        return f"MED/{id}/citations"
+        return f"MED/{id}/citations?format=json"
 
     def get_references_endpoint(self, id):
-        return f"MED/{id}/references"
+        return f"MED/{id}/references?format=json"
 
-    def get_full_text_endpoint(self, pmcid):
-        return f"{pmcid}/fullTextXML"
-
-    def get_json(self, base_url: str, endpoint: str, token: Optional[str] = None, per_page: int = 100) -> List[Dict[str, Any]]:
+    def get_json(self, base_url: str, endpoint: str, token: Optional[str] = None, per_page: int = 100) -> Dict[str, Any]:
 
         headers = {}
         if token:
             headers["Authorization"] = f"token {token}"
-
-        params = {"per_page": per_page, "page": 1}
+            
+        params = {"pageSize": per_page, "cursorMark": "*"} 
         items: List[Dict[str, Any]] = []
         url = base_url + endpoint
+        
+        wrapper_key = "resultList"
+        inner_key = "result"
 
         while True:
             resp = requests.get(url, headers=headers, params=params, timeout=30)
             resp.raise_for_status()
+
             try:
                 data = resp.json()
             except ValueError:
                 data = xmltodict.parse(resp.text)
 
-            if not isinstance(data, list):
-                return data
+            page_items = (data.get("resultList") or {}).get("result")
+            if page_items:
+                wrapper_key, inner_key = "resultList", "result"
+            
+            if not page_items:
+                page_items = (data.get("citationList") or {}).get("citation")
+                if page_items:
+                    wrapper_key, inner_key = "citationList", "citation"
 
-            items.extend(data)
+            if not page_items:
+                page_items = (data.get("referenceList") or {}).get("reference")
+                if page_items:
+                    wrapper_key, inner_key = "referenceList", "reference"
 
-            if "next" in resp.links:
-                url = resp.links["next"]["url"]
+            page_items = page_items or []
+
+            if isinstance(page_items, dict):
+                page_items = [page_items]
+            
+            items.extend(page_items)
+
+            next_page_url = data.get("nextPageUrl")
+            
+            if next_page_url and page_items:
+                url = next_page_url
                 params = None
             else:
                 break
 
-        return items
+        return {wrapper_key: {inner_key: items}}
+
 
     def write_df_to_csv(self, df: pd.DataFrame, filename: str) -> Path:
 
@@ -238,6 +313,7 @@ class EuropePMC:
         print(f"Wrote CSV: {path}")
         return path
 
+''' #uncomment to test run
 pmc = EuropePMC()
 tables = pmc.create_tables("ga4gh")
 current_directory = os.getcwd()
@@ -246,3 +322,7 @@ pmc.write_df_to_csv(tables[1], current_directory + "/test_authors.csv")
 pmc.write_df_to_csv(tables[2], current_directory + "/test_articles_authors.csv")
 pmc.write_df_to_csv(tables[3], current_directory + "/test_affiliations.csv")
 pmc.write_df_to_csv(tables[4], current_directory + "/test_citations.csv")
+pmc.write_df_to_csv(tables[5], current_directory + "/test_references.csv")
+pmc.write_df_to_csv(tables[6], current_directory + "/test_grants.csv")
+pmc.write_df_to_csv(tables[7], current_directory + "/test_fulltext.csv")
+'''
