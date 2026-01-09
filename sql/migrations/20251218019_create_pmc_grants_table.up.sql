@@ -18,3 +18,4 @@ CREATE TABLE IF NOT EXISTS grants (
 
 CREATE INDEX IF NOT EXISTS idx_grants_article_id ON grants(article_id);
 CREATE INDEX IF NOT EXISTS idx_grants_grant_id ON grants(grant_id);
+CREATE INDEX IF NOT EXISTS idx_grants_agency ON grants(agency);

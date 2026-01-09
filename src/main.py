@@ -73,14 +73,14 @@ def main() -> FastAPI:
     gh_api_key = os.getenv("GITHUB_API_KEY", "")
     gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
 
-    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key, gh_org)
+    gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key)
 
     gh_repo_fields = set(GithubRepo.model_fields.keys())
     gh_repo_sql_builder = sqlbuilder.SQLBuilder("github_repos").allow_fields(gh_repo_fields - {"id"})
     gh_repo = GithubRepoRepository(db_conn, gh_repo_sql_builder)
     gh_service = GithubReposService(gh_repo, gh_client, record_repo)
     gh_router = GithubRepoRouter(gh_service)
-
+    '''
     # Optionally sync repos once at startup
     # The service.sync_repos expects a `user` string (created_by/updated_by).
     sync_user = os.getenv("GITHUB_SYNC_USER", "system")
@@ -90,7 +90,7 @@ def main() -> FastAPI:
         logger.info("GitHub sync completed. %d repos synced.", len(synced))
     except Exception as e:
         logger.exception("GitHub sync failed: %s", e)
-
+    '''
     # --- FastAPI app + router
     app.include_router(gh_router.router)
     app.include_router(pubmed_router.router)

@@ -24,4 +24,5 @@ CREATE TABLE IF NOT EXISTS pmc_references (
       ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_references_article_id ON "references"(article_id);
+CREATE INDEX IF NOT EXISTS idx_references_article_id ON pmc_references(article_id);
+CREATE INDEX IF NOT EXISTS idx_references_pub_year ON pmc_references(pub_year);

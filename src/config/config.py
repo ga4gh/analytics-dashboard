@@ -11,8 +11,8 @@ class Config:
 
         self.pubmed_api_key = os.getenv("PUBMED_API_KEY", "")
 
-        self.host = os.getenv("HOST", "127.0.0.1")
-        self.port = int(os.getenv("PORT", "8080"))
+        self.host = os.getenv("HOST", "0.0.0.0")
+        self.port = int(os.getenv("PORT", "8000"))
         self.debug = os.getenv("DEBUG", "False").lower() == "true"
 
 config = Config()
