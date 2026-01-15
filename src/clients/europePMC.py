@@ -11,6 +11,7 @@ import xmltodict
 class EuropePMC:
     def __init__(self) -> None:
         self.base_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/"
+        self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
     def create_tables(self, keyword):
@@ -26,6 +27,9 @@ class EuropePMC:
 
         json_response = self.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
+
+        grants = self.create_grant_api(keyword, grants)
+        
 
         id = 10000
         for article in results:
@@ -128,14 +132,26 @@ class EuropePMC:
         affiliations.append(affiliations_data)
         return affiliations
 
-    def create_grant(self, article_data, grant_data, grants: list):
-        grants_data = {
-            "id": "",
-            "article_id": article_data.get("id") or article_data.get("pmid"),
-            "grant_id": grant_data.get("grantId") or grant_data.get("grant_id"),
-            "agency": grant_data.get("agency"),
-        }
-        grants.append(grants_data)
+    def create_grant(self, article_data, grants: list):
+        
+        for grant_data in (article_data.get("grantsList") or {}).get("grant") or []:
+            grants_data = {
+                "id": "",
+                "article_id": article_data.get("id") or article_data.get("pmid"),
+                "grant_id": grant_data.get("grantId") or grant_data.get("grant_id"),
+                "agency": grant_data.get("agency"),
+                "family_name": "",
+                "given_name": "",
+                "orcid": "",
+                "funder_name": "",
+                "grant": "", 
+                "doi": "",
+                "title": "",
+                "start_date": "",
+                "end_date": "",
+                "institution_name": "",
+            }
+            grants.append(grants_data)
         return grants
 
     def create_fulltext(self, article_data, fulltext_data, fulltexts: list):
@@ -198,16 +214,46 @@ class EuropePMC:
             references.append(reference)
         return references
 
-    def create_grant(self, article_data, grants: list):
+    def create_grant_api(self, keyword, grants: list):
+        response = self.get_grants(keyword)
+        
+        record_list = (response.get("RecordList") or {}).get("Record") or []
 
-        grant_data = (article_data.get("grantsList") or {}).get("grant") or []
+        if isinstance(record_list, dict):
+            record_list = [record_list]
 
-        for gr in grant_data:
+        for gr in record_list:
+            person = gr.get("Person") or {}
+            grant_info = gr.get("Grant") or {}
+            institution = gr.get("Institution") or {}
+            funder = grant_info.get("Funder") or {}
+            amount = grant_info.get("Amount") or {}
+
+            person_aliases = person.get("Alias") or []
+            if isinstance(person_aliases, dict):
+                person_aliases = [person_aliases]
+            
+            orcid = ""
+            for alias in person_aliases:
+                if alias.get("Source") == "ORCID":
+                    orcid = alias.get("value")
+                    break
+
             grant = {
                 "id": "",
-                "article_id": article_data.get("id"),
-                "grant_id": gr.get("grantId"),
-                "agency": gr.get("agency"),
+                "record_id": "",
+                "grant_id": grant_info.get("Id"),
+                "agency": funder.get("Name"),
+                "family_name": person.get("FamilyName"),
+                "given_name": person.get("GivenName"),
+                "orcid": orcid,
+                "funder_name": funder.get("Name"),
+                "grant": grant_info.get("Title"), 
+                "doi": grant_info.get("Doi"),
+                "title": grant_info.get("Title"),
+                "start_date": grant_info.get("StartDate"),
+                "end_date": grant_info.get("EndDate"),
+                "institution_name": institution.get("Name"),
             }
             grants.append(grant)
         return grants
@@ -240,6 +286,10 @@ class EuropePMC:
         json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid))
         return json_response
 
+    def get_grants(self, keyword):
+        json_response = self.get_json(self.grants_url, self.get_grants_endpoint(keyword))
+        return json_response
+
     def get_articles_endpoint(self, keyword):
         return f"search?query={keyword}&format=json&resultType=core"
 
@@ -248,6 +298,9 @@ class EuropePMC:
 
     def get_references_endpoint(self, id):
         return f"MED/{id}/references?format=json"
+
+    def get_grants_endpoint(self, keyword):
+        return f"get/query='{keyword}'&resultType=core&format=json"
 
     def get_json(self, base_url: str, endpoint: str, token: Optional[str] = None, per_page: int = 100) -> Dict[str, Any]:
 
@@ -285,6 +338,11 @@ class EuropePMC:
                 if page_items:
                     wrapper_key, inner_key = "referenceList", "reference"
 
+            if not page_items:
+                page_items = (data.get("RecordList") or {}).get("Record")
+                if page_items:
+                    wrapper_key, inner_key = "RecordList", "Record"
+
             page_items = page_items or []
 
             if isinstance(page_items, dict):
@@ -313,7 +371,7 @@ class EuropePMC:
         print(f"Wrote CSV: {path}")
         return path
 
-''' #uncomment to test run
+'''
 pmc = EuropePMC()
 tables = pmc.create_tables("ga4gh")
 current_directory = os.getcwd()
