@@ -1,5 +1,8 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from src.models.pmc_article import PMCArticle as Article, PMCFullText, PMCCitation, PMCReference
+from src.models.pmc_author import PMCAuthor as Author, PMCAffiliation as Affiliation, ArticleAuthor
+from src.models.grant import Grant
 
 import requests
 import pandas as pd
@@ -14,207 +17,117 @@ class EuropePMC:
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
-    def create_tables(self, keyword):
-        articles = []
-        authors = []
-        articles_authors = []
-        affiliations = []
-        temp_affiliations = []
-        citations = []
-        references = []
-        grants = []
-        fulltext = []
+    def create_article(self, article_data, id):
+        return Article(
+            id=id,
+            record_id=id,
+            Source=article_data.get("source"),
+            Pm_id=article_data.get("id"),
+            Pmc_id=article_data.get("pmcid"),
+            Full_text_id="",
+            Doi=article_data.get("doi"),
+            Title=article_data.get("title"),
+            Pub_year=article_data.get("pubYear"),
+            Abstract_text=article_data.get("abstractText"),
+            Affiliation=article_data.get("affiliation"),
+            Publicication_status=article_data.get("publicationStatus"),
+            Language=article_data.get("language"),
+            Pub_type=(article_data.get("pubTypeList") or {}).get("pubType"),
+            Is_open_access=bool(article_data.get("isOpenAccess")),
+            inEPMC=bool(article_data.get("inEPMC")),
+            inPMC=bool(article_data.get("inPMC")),
+            hasPDF=bool(article_data.get("hasPDF")),
+            hasBook=bool(article_data.get("hasBook")),
+            hasSuppl=bool(article_data.get("hasSuppl")),
+            Cited_by_count=article_data.get("citedByCount"),
+            Has_references=bool(article_data.get("hasReferences")),
+            Dateofcreation=article_data.get("dateOfCreation"),
+            firstIndexdate=article_data.get("firstIndexDate"),
+            Fulltextreceivedate=article_data.get("fullTextReceivedDate"),
+            Revisiondate=article_data.get("dateOfRevision"),
+            Epubdate=article_data.get("electronicPublicationDate"),
+            Firstpublicationdate=article_data.get("firstPublicationDate"),
+        )
 
-        json_response = self.get_articles(keyword)
-        results = json_response.get("resultList", {}).get("result", []) or []
+    def create_author(self, author_data):
+        return Author(
+            id= "",
+            fullname= author_data.get("fullName"),
+            firstname= author_data.get("firstName"),
+            lastname= author_data.get("lastName"),
+            initials= author_data.get("initials"),
+            orcid= (author_data.get("authorId") or {}).get("value"),
+        )
 
-        grants = self.create_grant_api(keyword, grants)
+    def create_article_author(self, article_data, author_data, author_order):
         
+        return ArticleAuthor(
+            id= "",
+            article_id= article_data.get("id") or article_data.get("pmid"),
+            author_id= "",
+            author_order= author_order 
+        )
 
-        id = 10000
-        for article in results:
-            
-            articles = self.create_article(article, articles, id)
-            grants = self.create_grant(article, grants)
-            citations = self.create_citation(article.get("id"), citations)
-            references = self.create_reference(article, references)
-            fulltext = self.create_fulltext(article, fulltext)
-
-            id += 1
-            author_order = 1
-            for author in (article.get("authorList") or {}).get("author") or []:
-                
-                authors = self.create_author(author, authors)
-
-                articles_authors =self.create_article_author(article, author, articles_authors, author_order)
-                author_order +=1
-                
-                for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
-                    org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
-                    if org_name not in temp_affiliations:
-                        affiliations = self.create_affiliation(aff, affiliations)
-
-
-        articles_df = pd.DataFrame(articles)
-        authors_df = pd.DataFrame(authors)
-        articles_authors_df = pd.DataFrame(articles_authors)
-        affiliations_df = pd.DataFrame(affiliations)
-        citations_df = pd.DataFrame(citations)
-        references_df = pd.DataFrame(references)
-        grants_df = pd.DataFrame(grants)
-        fulltext_df = pd.DataFrame(fulltext)
-
-        return articles_df, authors_df, articles_authors_df, affiliations_df, citations_df, references_df, grants_df, fulltext_df
-
-    def create_article(self, article_data, articles: list, id):
-        data = {
-                "id": id,
-                "record_id": id,
-                "Source": article_data.get("source"),
-                "Pm_id": article_data.get("id"),
-                "Pmc_id": article_data.get("pmcid"),
-                "Full_text_id": "",
-                "Doi": article_data.get("doi"),
-                "Title": article_data.get("title"),
-                "Pub_year": article_data.get("pubYear"),
-                "Abstract_text": article_data.get("abstractText"),
-                "Affiliation": article_data.get("affiliation"),
-                "Publicication_status": article_data.get("publicationStatus"),
-                "Language": article_data.get("language"),
-                "Pub_type": (article_data.get("pubTypeList") or {}).get("pubType"),
-                "Is_open_access": bool(article_data.get("isOpenAccess")),
-                "inEPMC": bool(article_data.get("inEPMC")),
-                "inPMC": bool(article_data.get("inPMC")),
-                "hasPDF": bool(article_data.get("hasPDF")),
-                "hasBook": bool(article_data.get("hasBook")),
-                "hasSuppl": bool(article_data.get("hasSuppl")),
-                "Cited_by_count": article_data.get("citedByCount"),
-                "Has_references": bool(article_data.get("hasReferences")),
-                "Dateofcreation": article_data.get("dateOfCreation"),
-                "firstIndexdate": article_data.get("firstIndexDate"),
-                "Fulltextreceivedate": article_data.get("fullTextReceivedDate"),
-                "Revisiondate": article_data.get("dateOfRevision"),
-                "Epubdate": article_data.get("electronicPublicationDate"),
-                "Firstpublicationdate": article_data.get("firstPublicationDate"),
-            }
-        articles.append(data)
-        return articles
-
-    def create_author(self, author_data, authors: list):
-        author = {
-            "id": "",
-            "fullname": author_data.get("fullName"),
-            "firstname": author_data.get("firstName"),
-            "lastname": author_data.get("lastName"),
-            "initials": author_data.get("initials"),
-            "orcid": (author_data.get("authorId") or {}).get("value"),
-        }
-        authors.append(author)
-        return authors
-
-    def create_article_author(self, article_data, author_data, articles_authors: list, author_order):
-        articles_authors_data = {
-            "id": "",
-            "article_id": article_data.get("id") or article_data.get("pmid"),
-            "author_id": "",
-            "author_order": author_order 
-        }
-        articles_authors.append(articles_authors_data)
-        return articles_authors
-
-    def create_affiliation(self, affiliation_data, affiliations: list):
+    def create_affiliation(self, affiliation_data):
         org_name = affiliation_data.get("affiliation") if isinstance(affiliation_data, dict) else affiliation_data
-        affiliations_data = {
-            "id": "",
-            "author_id": "",
-            "org_name": org_name
-        }
-        affiliations.append(affiliations_data)
-        return affiliations
-
-    def create_grant(self, article_data, grants: list):
         
-        for grant_data in (article_data.get("grantsList") or {}).get("grant") or []:
-            grants_data = {
-                "id": "",
-                "article_id": article_data.get("id") or article_data.get("pmid"),
-                "grant_id": grant_data.get("grantId") or grant_data.get("grant_id"),
-                "agency": grant_data.get("agency"),
-                "family_name": "",
-                "given_name": "",
-                "orcid": "",
-                "funder_name": "",
-                "grant": "", 
-                "doi": "",
-                "title": "",
-                "start_date": "",
-                "end_date": "",
-                "institution_name": "",
-            }
-            grants.append(grants_data)
-        return grants
+        return Affiliation(
+            id= "",
+            author_id= "",
+            org_name= org_name
+        )
 
-    def create_fulltext(self, article_data, fulltext_data, fulltexts: list):
+    def create_grant(self, article_data):
+            
+        return Grant(
+            id= "",
+            article_id= article_data.get("id") or article_data.get("pmid"),
+            grant_id= grant_data.get("grantId") or grant_data.get("grant_id"),
+            agency= grant_data.get("agency"),
+            family_name= "",
+            given_name= "",
+            orcid= "",
+            funder_name= "",
+            grant= "", 
+            doi= "",
+            title= "",
+            start_date= "",
+            end_date= "",
+            institution_name= "",
+        )
 
-        fulltext = {
-            "id": "",
-            "article_id": article_data.get("id") or article_data.get("pmid"),
-            "availability": fulltext_data.get("availability"),
-            "availability_code": fulltext_data.get("availabilityCode") or fulltext_data.get("availability_code"),
-            "document_style": fulltext_data.get("documentStyle") or fulltext_data.get("document_style"),
-            "site": fulltext_data.get("site"),
-            "url": fulltext_data.get("url"),
-        }
-        fulltexts.append(fulltext)
-        return fulltexts
+    def create_citation(self, pmid):
 
-    def create_citation(self, pmid, citations: list):
-        citation_data = self.get_citations(pmid)
+        return PMCCitation(
+            id= "",
+            article_id= pmid,
+            citation_id= cite.get("id"),
+            source= cite.get("source"),
+            citation_type= cite.get("citationType") or cite.get("citation_type"),
+            title= cite.get("title"),
+            authors= cite.get("authors"),
+            pub_year= cite.get("pubYear") or cite.get("pub_year"),
+            citation_count= count,
+        )
 
-        count = 1
-        for cite in (citation_data.get("citationList") or {}).get("citation") or []:
-            citation = {
-                "id": "",
-                "article_id": pmid,
-                "citation_id": cite.get("id"),
-                "source": cite.get("source"),
-                "citation_type": cite.get("citationType") or cite.get("citation_type"),
-                "title": cite.get("title"),
-                "authors": cite.get("authors"),
-                "pub_year": cite.get("pubYear") or cite.get("pub_year"),
-                "citation_count": count,
-            }
-            citations.append(citation)
-            count +=1
-        return citations
+    def create_reference(self, article_data):
 
-    def create_reference(self, article_data, references: list):
+        return PMCReference(
+            id= "",
+            article_id= article_data.get("id"),
+            reference_id= ref.get("id"),
+            source= ref.get("source"),
+            citation_type= ref.get("citationType") or ref.get("citation_type"),
+            title= ref.get("title"),
+            authors= ref.get("authors"),
+            pub_year= ref.get("pubYear") or ref.get("pub_year"),
+            issn= ref.get("ISSN") or ref.get("issn"),
+            essn= ref.get("ESSN") or ref.get("essn"),
+            cited_order= ref.get("citedOrder") or ref.get("cited_order"),
+            match= bool(ref.get("match")) if ref.get("match") is not None else None,
+        )
 
-        response = self.get_references(article_data.get("id"))
-        reference_data = (response.get("referenceList") or {}).get("reference") or []
-
-        if isinstance(reference_data, dict):
-            reference_data = [reference_data]
-
-        for ref in reference_data:
-            reference = {
-                "id": "",
-                "article_id": article_data.get("id"),
-                "reference_id": ref.get("id"),
-                "source": ref.get("source"),
-                "citation_type": ref.get("citationType") or ref.get("citation_type"),
-                "title": ref.get("title"),
-                "authors": ref.get("authors"),
-                "pub_year": ref.get("pubYear") or ref.get("pub_year"),
-                "issn": ref.get("ISSN") or ref.get("issn"),
-                "essn": ref.get("ESSN") or ref.get("essn"),
-                "cited_order": ref.get("citedOrder") or ref.get("cited_order"),
-                "match": bool(ref.get("match")) if ref.get("match") is not None else None,
-            }
-            references.append(reference)
-        return references
-
-    def create_grant_api(self, keyword, grants: list):
+    def create_grant_api(self, keyword):
         response = self.get_grants(keyword)
         
         record_list = (response.get("RecordList") or {}).get("Record") or []
@@ -239,40 +152,40 @@ class EuropePMC:
                     orcid = alias.get("value")
                     break
 
-            grant = {
-                "id": "",
-                "record_id": "",
-                "grant_id": grant_info.get("Id"),
-                "agency": funder.get("Name"),
-                "family_name": person.get("FamilyName"),
-                "given_name": person.get("GivenName"),
-                "orcid": orcid,
-                "funder_name": funder.get("Name"),
-                "grant": grant_info.get("Title"), 
-                "doi": grant_info.get("Doi"),
-                "title": grant_info.get("Title"),
-                "start_date": grant_info.get("StartDate"),
-                "end_date": grant_info.get("EndDate"),
-                "institution_name": institution.get("Name"),
-            }
+            
             grants.append(grant)
-        return grants
+        return Grant(
+            id= "",
+            record_id= "",
+            grant_id= grant_info.get("Id"),
+            agency= funder.get("Name"),
+            family_name= person.get("FamilyName"),
+            given_name= person.get("GivenName"),
+            orcid= orcid,
+            funder_name= funder.get("Name"),
+            grant= grant_info.get("Title"), 
+            doi= grant_info.get("Doi"),
+            title= grant_info.get("Title"),
+            start_date= grant_info.get("StartDate"),
+            end_date= grant_info.get("EndDate"),
+            institution_name= institution.get("Name"),
+        )
 
-    def create_fulltext(self, article_data, fulltext: list):
+    def create_fulltext(self, article_data):
 
         fulltext_data = (article_data.get("fullTextUrlList") or {}).get("fullTextUrl") or []
         for ft in fulltext_data:
-            text = {
-                "id": "",
-                "article_id": article_data.get("id"),
-                "availability": ft.get("availability"),
-                "availability_code": ft.get("availabilityCode"),
-                "document_style": ft.get("documentStyle"),
-                "site": ft.get("site"),
-                "url": ft.get("url"),
-            }
+            
             fulltext.append(text)
-        return fulltext
+        return PMCFullText(
+            id= "",
+            article_id= article_data.get("id"),
+            availability= ft.get("availability"),
+            availability_code= ft.get("availabilityCode"),
+            document_style= ft.get("documentStyle"),
+            site= ft.get("site"),
+            url= ft.get("url"),
+        )
 
     def get_articles(self, keyword):
         json_response = self.get_json(self.base_url, self.get_articles_endpoint(keyword))        
@@ -370,17 +283,3 @@ class EuropePMC:
         df.to_csv(path)
         print(f"Wrote CSV: {path}")
         return path
-
-'''
-pmc = EuropePMC()
-tables = pmc.create_tables("ga4gh")
-current_directory = os.getcwd()
-pmc.write_df_to_csv(tables[0], current_directory + "/test_articles.csv")
-pmc.write_df_to_csv(tables[1], current_directory + "/test_authors.csv")
-pmc.write_df_to_csv(tables[2], current_directory + "/test_articles_authors.csv")
-pmc.write_df_to_csv(tables[3], current_directory + "/test_affiliations.csv")
-pmc.write_df_to_csv(tables[4], current_directory + "/test_citations.csv")
-pmc.write_df_to_csv(tables[5], current_directory + "/test_references.csv")
-pmc.write_df_to_csv(tables[6], current_directory + "/test_grants.csv")
-pmc.write_df_to_csv(tables[7], current_directory + "/test_fulltext.csv")
-'''

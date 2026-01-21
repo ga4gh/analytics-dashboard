@@ -51,3 +51,38 @@ class PMCArticleFull(PMCArticle):
     fulltexts: List[FullText] = []
     citations: List[Citation] = []
     references: List[Reference] = []
+
+class PMCFullText(BaseModel):
+    id: Optional[int] = None
+    article_id: Optional[int] = None
+    availability: str
+    availability_code: str
+    document_style: str
+    site: str
+    url: str
+
+class PMCCitation(BaseModel):
+    id= Optional[int] = None
+    article_id= Optional[int] = None
+    citation_id= Optional[int] = None
+    source= str
+    citation_type= str
+    title= str
+    authors= str
+    pub_year= int
+    citation_count= int
+
+class PMCReference(BaseModel):
+    id= Optional[int] = None
+    article_id= Optional[int] = None
+    reference_id= Optional[int] = None
+    source= str
+    citation_type= str
+    title= str
+    authors= str
+    pub_year= int
+    issn= str
+    essn= str
+    cited_order= int
+    match= str
+

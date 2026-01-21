@@ -10,14 +10,6 @@ class Keyword(BaseModel):
 
     model_config = {"from_attributes": True}
     
-class Grant(BaseModel):
-    id: Optional[int] = None
-    article_id: int
-    grant_id: str
-    agency: str
-
-    model_config = {"from_attributes": True}
-    
 class FullText(BaseModel):
     id: Optional[int] = None
     article_id: int

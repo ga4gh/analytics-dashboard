@@ -1,8 +1,17 @@
 CREATE TABLE IF NOT EXISTS grants (
     id SERIAL PRIMARY KEY,
-    article_id INTEGER NOT NULL,
+    record_id INTEGER NOT NULL,
     grant_id VARCHAR(128),
     agency TEXT,
+    family_name TEXT,
+    given_name TEXT,
+    orcid TEXT,
+    funder_name TEXT,
+    doi TEXT,
+    title TEXT,
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    institution_name TEXT,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by VARCHAR(64),
@@ -10,12 +19,12 @@ CREATE TABLE IF NOT EXISTS grants (
     deleted_by VARCHAR(64),
     deleted_at TIMESTAMPTZ,
     version INTEGER NOT NULL DEFAULT 1,
-    CONSTRAINT fk_grants_article
-      FOREIGN KEY (article_id)
-      REFERENCES pmc_articles (id)
+    CONSTRAINT fk_grants_record
+      FOREIGN KEY (record_id)
+      REFERENCES record (id)
       ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_grants_article_id ON grants(article_id);
+CREATE INDEX IF NOT EXISTS idx_grants_record_id ON grants(record_id);
 CREATE INDEX IF NOT EXISTS idx_grants_grant_id ON grants(grant_id);
 CREATE INDEX IF NOT EXISTS idx_grants_agency ON grants(agency);
