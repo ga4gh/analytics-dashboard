@@ -11,6 +11,7 @@ psycopg-pool==3.2.6
 # Validation / config
 pydantic==2.12.3
 python-dotenv==1.2.1
+pydantic-settings==2.10.0
 
 # HTTP
 requests==2.32.5

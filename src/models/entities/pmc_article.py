@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import List, Optional
 
-from src.models.citation import Citation, Reference
-from src.models.extras import FullText, Grant, Keyword
-from src.models.pmc_author import PMCAffiliation, PMCAuthor, ArticleAuthor
+from src.models.entities.citations import Citation, Reference
+from src.models.entities.extras import FullText, Grant, Keyword
+from src.models.entities.pmc_author import PMCAffiliation, PMCAuthor, ArticleAuthor
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,23 +11,6 @@ from .base import Base
 from .pmc_author import PMCAffiliation, ArticleAuthor
 from .extras import Keyword, Grant, FullText
 from .citations import Citation, Reference
-
-from sqlalchemy import (
-    Boolean,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    TIMESTAMP,
-)
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-    relationship,
-)
-
-from .base import Base
-
 
 class PMCArticle(Base):
     __tablename__ = "pmc_articles"

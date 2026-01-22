@@ -28,18 +28,50 @@ class Keyword(Base):
 class Grant(Base):
     __tablename__ = "grants"
 
+    # ---------- PK / FK ----------
     id: Mapped[int] = mapped_column(primary_key=True)
-    record_id: Mapped[int] = mapped_column(ForeignKey("records.id", ondelete="CASCADE"), nullable=False)
-    grant_id: Mapped[str] = mapped_column(String(128))
-    agency: Mapped[str] = mapped_column(Text)
+    record_id: Mapped[int] = mapped_column(
+        ForeignKey("record.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
-    # Audit fields
+    # ---------- Core grant fields ----------
+    grant_id: Mapped[Optional[str]] = mapped_column(String(128))
+    agency: Mapped[Optional[str]] = mapped_column(Text)
+
+    family_name: Mapped[Optional[str]] = mapped_column(Text)
+    given_name: Mapped[Optional[str]] = mapped_column(Text)
+    orcid: Mapped[Optional[str]] = mapped_column(Text)
+
+    funder_name: Mapped[Optional[str]] = mapped_column(Text)
+    doi: Mapped[Optional[str]] = mapped_column(Text)
+    title: Mapped[Optional[str]] = mapped_column(Text)
+
+    start_date: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+    end_date: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+
+    institution_name: Mapped[Optional[str]] = mapped_column(Text)
+
+    # ---------- Audit ----------
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+    )
     updated_by: Mapped[Optional[str]] = mapped_column(String(64))
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+    )
     deleted_by: Mapped[Optional[str]] = mapped_column(String(64))
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+
     version: Mapped[int] = mapped_column(Integer, default=1)
 
 

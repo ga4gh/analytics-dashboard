@@ -1,16 +1,23 @@
 from datetime import datetime
 
 from src.models.pmc_article import PMCArticleFull as ArticleModel
+from src.models.entities.pmc_article import PMCArticle
 from .setup import DatabaseConnection
 from .sqlbuilder import SQLBuilder
 import json
 from typing import List
+from sqlalchemy.orm import Session, selectinload
+
 
 class EPMCRepo:
-    def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
+    '''def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
         self.db = db
         self.sql_builder = sql_builder
-
+    '''
+    
+    def __init__(self, db: Session):
+        self.db = db
+    
     def insert(self, article: ArticleModel) -> int:
         data = article.model_dump(exclude={"id", "authors"})
         query, values = self.sql_builder.build_insert(data)
@@ -112,7 +119,7 @@ class EPMCRepo:
                         articles.append(ArticleModel(**data))
                 return articles
         
-def get_all_articles(self) -> list[ArticleModel]:
+def get_all_articles_old(self) -> list[ArticleModel]:
     query = """
     SELECT jsonb_build_object(
         'id', a.id,
@@ -243,4 +250,23 @@ def get_all_articles(self) -> list[ArticleModel]:
         cur.execute(query)
         rows = cur.fetchall()
 
-    return [PMCArticleFull.model_validate(row[0]) for row in rows]
+    return [ArticleModel.model_validate(row[0]) for row in rows]
+
+def get_all_articles(self) -> list[PMCArticle]:
+        """
+        Fetch all articles with all child relationships loaded.
+        """
+        return (
+            self.db.query(PMCArticle)
+            .options(
+                selectinload(PMCArticle.article_authors),
+                selectinload(PMCArticle.affiliations),
+                selectinload(PMCArticle.keywords),
+                selectinload(PMCArticle.grants),
+                selectinload(PMCArticle.fulltexts),
+                selectinload(PMCArticle.citations),
+                selectinload(PMCArticle.references),
+            )
+            .all()
+        )
+

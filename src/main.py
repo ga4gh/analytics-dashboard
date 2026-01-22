@@ -38,6 +38,8 @@ from .repositories.record import Record as RecordRepo
 from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
 
+from .routers.health import router as health_router
+
 from contextlib import asynccontextmanager
 
 def main() -> FastAPI:
@@ -103,6 +105,8 @@ def main() -> FastAPI:
     pypi_router = PypiRouter(pypi_service)
 
     app.include_router(pypi_router.router)
+    
+    app.include_router(health_router)
         
     return app
 

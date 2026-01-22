@@ -12,7 +12,9 @@ class EPMCService:
         self.epmc_repo = repo
         
     def get_all_articles(self) -> List[PMCArticleFull]:
-        return self.epmc_repo.get_all_articles()
+        articles = self.epmc_repo.get_all_articles()
+        return [PMCArticleFull.model_validate(article) for article in articles]
+
 
     def insert_articles_by_keyword(self, keyword: str, created_by: str,
                                    epmc_db: str) -> dict[str, int]:
