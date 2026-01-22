@@ -62,6 +62,19 @@ class EPMCRepo:
                     return ArticleModel(**data)
                 return None
 
+    def get_by_author_name(self, fullname: str, firstname: str, lastname: str) -> ArticleModel | None:
+        query = "SELECT * FROM pmc_authors WHERE fullname = %s AND firstname = %s AND lastname = %s"
+
+        with self.db.get_connection() as conn, conn.cursor() as cur:
+                cur.execute(query, (fullname, firstname, lastname,))
+                row = cur.fetchone()
+
+                if row and cur.description:
+                    columns = [desc[0] for desc in cur.description]
+                    data = dict(zip(columns, row, strict=False))
+                    return ArticleModel(**data)
+                return None
+
     def get_by_keyword(self, keyword: str) -> list[ArticleModel]:
         query = """
             SELECT a.* FROM pmc_articles a

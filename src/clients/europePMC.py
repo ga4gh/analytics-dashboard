@@ -59,28 +59,29 @@ class EuropePMC:
             orcid= (author_data.get("authorId") or {}).get("value"),
         )
 
-    def create_article_author(self, article_data, author_data, author_order):
+    def create_article_author(self, article_data, author_data, author_order, author_id):
         
         return ArticleAuthor(
             id= "",
             article_id= article_data.get("id") or article_data.get("pmid"),
-            author_id= "",
+            author_id= author_id,
             author_order= author_order 
         )
 
-    def create_affiliation(self, affiliation_data):
+    def create_affiliation(self, affiliation_data, author_id):
         org_name = affiliation_data.get("affiliation") if isinstance(affiliation_data, dict) else affiliation_data
         
         return Affiliation(
             id= "",
-            author_id= "",
+            author_id= author_id,
             org_name= org_name
         )
 
-    def create_grant(self, article_data):
+    def create_grant(self, article_data, record_id):
             
         return Grant(
             id= "",
+            record_id = record_id,
             article_id= article_data.get("id") or article_data.get("pmid"),
             grant_id= grant_data.get("grantId") or grant_data.get("grant_id"),
             agency= grant_data.get("agency"),
@@ -127,7 +128,7 @@ class EuropePMC:
             match= bool(ref.get("match")) if ref.get("match") is not None else None,
         )
 
-    def create_grant_api(self, keyword):
+    def create_grant_api(self, keyword, record_id):
         response = self.get_grants(keyword)
         
         record_list = (response.get("RecordList") or {}).get("Record") or []
@@ -156,7 +157,7 @@ class EuropePMC:
             grants.append(grant)
         return Grant(
             id= "",
-            record_id= "",
+            record_id= record_id,
             grant_id= grant_info.get("Id"),
             agency= funder.get("Name"),
             family_name= person.get("FamilyName"),

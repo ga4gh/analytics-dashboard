@@ -26,31 +26,25 @@ class EPMCService:
         results = json_response.get("resultList", {}).get("result", []) or []
         affiliations_list = [] # fetch all affiliations names in db
 
-        update = True #temp
+        
         #grant = epmc.create_grant_api(keyword)
         
         id = 10000
         for article in results:
             
+            existing = epmc_repo.get_by_source_id(article.get("id"))
+            update = existing is None
+
             # Record
-            record_model = Record(
-                    id= "",
-                    record_type= RecordType.ARTICLE,
-                    source= Source.EUROPE_PMC,
-                    status= Status.APPROVED,
-                    keyword= [keyword],
-                    product_line= ProductType.IMPLEMENTATION,
-                    created_by= "",
-                    updated_by= "",
-                    version= 1 )
+            article_record_model = self.create_record("article", keyword)
             if update:
-                record_id = epmc_repo.update(record_model)
+                article_record_id = epmc_repo.update(article_record_model)
             else:
-                record_id = epmc_repo.insert(record_model)
+                article_record_id = epmc_repo.insert(article_record_model)
 
 
             # Article
-            article_model = epmc.create_article(article, id)
+            article_model = epmc.create_article(article, article_record_id)
             if update:
                 article_id = epmc_repo.update(article_model)
             else:
@@ -59,7 +53,14 @@ class EPMCService:
 
             # Grants
             for grant_data in (article.get("grantsList") or {}).get("grant") or []:
-                grant_model = epmc.create_grant(article, grant_data)
+
+                grant_record_model = self.create_record("article", keyword)
+                if update:
+                    grant_record_id = epmc_repo.update(article_record_model)
+                else:
+                    grant_record_id = epmc_repo.insert(article_record_model)
+
+                grant_model = epmc.create_grant(article, grant_data, grant_record_id)
                 if update:
                     grant_id = epmc_repo.update(grant_model)
                 else:
@@ -107,7 +108,7 @@ class EPMCService:
                 else:
                     author_id = epmc_repo.insert(author_model)
 
-                articles_authors_model =epmc.create_article_author(article, author, author_order)
+                articles_authors_model =epmc.create_article_author(article, author, author_order, author_id)
                 if update:
                     articles_authors_id = epmc_repo.update(articles_authors_model)
                 else:
@@ -118,9 +119,21 @@ class EPMCService:
                 for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
                     org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
                     if org_name not in affiliations_list:
-                        affiliation_model = epmc.create_affiliation(aff)
+                        affiliation_model = epmc.create_affiliation(aff, author_id)
                         if update:
                             affiliation_id = epmc_repo.update(affiliation_model)
                         else:
                             affiliation_id = epmc_repo.insert(affiliation_model)
+
+    def create_record(self, type, keyword):
+        return Record(
+            id= "",
+            record_type= RecordType.ARTICLE if type=="article" else RecordType.GRANT,
+            source= Source.EUROPE_PMC,
+            status= Status.APPROVED,
+            keyword= [keyword],
+            product_line= ProductType.IMPLEMENTATION,
+            created_by= "",
+            updated_by= "",
+            version= 1 )
                         
