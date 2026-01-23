@@ -26,8 +26,34 @@ class EPMCService:
         results = json_response.get("resultList", {}).get("result", []) or []
         affiliations_list = [] # fetch all affiliations names in db
 
-        
-        #grant = epmc.create_grant_api(keyword)
+        # grants api
+        grant_response = epmc.get_grants(keyword)
+        record_list = (grant_response.get("RecordList") or {}).get("Record") or []
+        if isinstance(record_list, dict):
+            record_list = [record_list]
+
+        for gr in record_list:
+            person = gr.get("Person") or {}
+            grant_info = gr.get("Grant") or {}
+            institution = gr.get("Institution") or {}
+            funder = grant_info.get("Funder") or {}
+            amount = grant_info.get("Amount") or {}
+
+            person_aliases = person.get("Alias") or []
+            if isinstance(person_aliases, dict):
+                person_aliases = [person_aliases]
+            
+            orcid = ""
+            for alias in person_aliases:
+                if alias.get("Source") == "ORCID":
+                    orcid = alias.get("value")
+                    break
+            grant_api_model = epmc.create_grant_api(keyword)
+            if update:
+                grant_api_id = epmc_repo.update(grant_api_model)
+            else:
+                grant_api_id = epmc_repo.insert(grant_api_model)
+
         
         id = 10000
         for article in results:
