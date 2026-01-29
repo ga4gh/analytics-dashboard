@@ -1,6 +1,6 @@
 from typing import List
 
-from src.clients.europePMC import EuropePMC
+from src.clients.epmc import EPMCClient
 
 from src.models.record import Record, RecordType, RecordRequest, Source, Status, ProductType
 from src.models.entities.pmc_article import PMCArticle, PMCArticleFull
@@ -20,7 +20,7 @@ class EPMCService:
 
     def insert_articles_by_keyword(self, keyword: str, created_by: str,
                                    epmc_db: str) -> dict[str, int]:
-        epmc = EuropePMC()
+        epmc = EPMCClient()
         pmc_article_fields = set(PMCArticle.model_fields.keys())
         sql_builder = SQLBuilder.SQLBuilder("pmc_articles").allow_fields(pmc_article_fields - {"id"})
         epmc_repo = EPMCRepo(epmc_db, )
@@ -53,9 +53,11 @@ class EPMCService:
 
             # Citations
             citation_data = epmc.get_citations()
+            cite_count = 1
             for cite in (citation_data.get("citationList") or {}).get("citation") or []:
-                citations_model = epmc.create_citation(article.get("id"))
+                citations_model = epmc.create_citation(cite, article.get("id"), cite_count)
                 citation_id = self.insert_or_update(epmc, citations_model, is_update)
+                cite_count += 1
 
 
             # References
@@ -71,7 +73,7 @@ class EPMCService:
 
             # Fulltext
             for ft in (article.get("fullTextUrlList") or {}).get("fullTextUrl") or []:
-                fulltext_model = epmc.create_fulltext(article)
+                fulltext_model = epmc.create_fulltext(article, ft)
                 fulltext_id = self.insert_or_update(epmc, fulltext_model, is_update)
             
             author_order = 1
@@ -95,9 +97,9 @@ class EPMCService:
                         affiliation_id = self.insert_or_update(epmc, affiliation_model, is_update)
 
 
-    def create_grants(self, repo: EPMCRepo, client: EuropePMC, keyword):
+    def create_grants(self, repo: EPMCRepo, client: EPMCClient, keyword):
         # grants api
-        grant_response = repo.get_grants(keyword)
+        grant_response = client.get_grants(keyword)
         record_list = (grant_response.get("RecordList") or {}).get("Record") or []
         
         if isinstance(record_list, dict):
@@ -105,22 +107,8 @@ class EPMCService:
 
         for gr in record_list:
             is_update = False #todo
-            person = gr.get("Person") or {}
-            grant_info = gr.get("Grant") or {}
-            institution = gr.get("Institution") or {}
-            funder = grant_info.get("Funder") or {}
-            amount = grant_info.get("Amount") or {}
 
-            person_aliases = person.get("Alias") or []
-            if isinstance(person_aliases, dict):
-                person_aliases = [person_aliases]
-            
-            orcid = ""
-            for alias in person_aliases:
-                if alias.get("Source") == "ORCID":
-                    orcid = alias.get("value")
-                    break
-            grant_api_model = client.create_grant_api(keyword)
+            grant_api_model = client.create_grant_api(gr)
             self.insert_or_update(repo, grant_api_model, is_update)
 
     def create_record(self, type, keyword):

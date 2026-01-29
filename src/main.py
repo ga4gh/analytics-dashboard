@@ -1,4 +1,5 @@
 # main.py
+import imp
 import os
 import logging
 import uvicorn
@@ -42,6 +43,10 @@ from .routers.health import router as health_router
 
 from contextlib import asynccontextmanager
 
+from repositories.epmc import EPMCRepo
+from services.epmc import EPMCService
+from clients.epmc import EPMCClient
+
 def main() -> FastAPI:
     app = FastAPI()
 
@@ -49,7 +54,13 @@ def main() -> FastAPI:
     db_conn = setup.DatabaseConnection(config.database_url)
     db_conn.connect()
     logger.info("Database connected")
-        
+
+    epmc_client = EPMCClient()
+    epmc_repo = EPMCRepo(db_conn)
+    epmc_service = EPMCService(epmc_repo)
+    epmc_service.insert_articles_by_keyword("ga4gh", "system", db_conn)
+
+    '''   
     record_fields = set(Record.model_fields.keys())
     record_sql_builder = sqlbuilder.SQLBuilder("records").allow_fields(record_fields - {"id"})
     record_repo = RecordRepo(db_conn, record_sql_builder)
@@ -82,7 +93,7 @@ def main() -> FastAPI:
     gh_repo = GithubRepoRepository(db_conn, gh_repo_sql_builder)
     gh_service = GithubReposService(gh_repo, gh_client, record_repo)
     gh_router = GithubRepoRouter(gh_service)
-    '''
+    ''''''
     # Optionally sync repos once at startup
     # The service.sync_repos expects a `user` string (created_by/updated_by).
     sync_user = os.getenv("GITHUB_SYNC_USER", "system")
@@ -92,7 +103,7 @@ def main() -> FastAPI:
         logger.info("GitHub sync completed. %d repos synced.", len(synced))
     except Exception as e:
         logger.exception("GitHub sync failed: %s", e)
-    '''
+    ''''''
     # --- FastAPI app + router
     app.include_router(gh_router.router)
     app.include_router(pubmed_router.router)
@@ -107,7 +118,7 @@ def main() -> FastAPI:
     app.include_router(pypi_router.router)
     
     app.include_router(health_router)
-        
+        '''
     return app
 
 

@@ -11,7 +11,7 @@ import os
 import xmltodict
 
 
-class EuropePMC:
+class EPMCClient:
     def __init__(self) -> None:
         self.base_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/"
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
@@ -83,8 +83,8 @@ class EuropePMC:
             id= "",
             record_id = record_id,
             article_id= article_data.get("id") or article_data.get("pmid"),
-            grant_id= grant_data.get("grantId") or grant_data.get("grant_id"),
-            agency= grant_data.get("agency"),
+            grant_id= article_data.get("grantId") or article_data.get("grant_id"),
+            agency= article_data.get("agency"),
             family_name= "",
             given_name= "",
             orcid= "",
@@ -97,7 +97,7 @@ class EuropePMC:
             institution_name= "",
         )
 
-    def create_citation(self, pmid):
+    def create_citation(self, cite, pmid, count):
 
         return PMCCitation(
             id= "",
@@ -116,45 +116,35 @@ class EuropePMC:
         return PMCReference(
             id= "",
             article_id= article_data.get("id"),
-            reference_id= ref.get("id"),
-            source= ref.get("source"),
-            citation_type= ref.get("citationType") or ref.get("citation_type"),
-            title= ref.get("title"),
-            authors= ref.get("authors"),
-            pub_year= ref.get("pubYear") or ref.get("pub_year"),
-            issn= ref.get("ISSN") or ref.get("issn"),
-            essn= ref.get("ESSN") or ref.get("essn"),
-            cited_order= ref.get("citedOrder") or ref.get("cited_order"),
-            match= bool(ref.get("match")) if ref.get("match") is not None else None,
+            reference_id= article_data.get("id"),
+            source= article_data.get("source"),
+            citation_type= article_data.get("citationType") or article_data.get("citation_type"),
+            title= article_data.get("title"),
+            authors= article_data.get("authors"),
+            pub_year= article_data.get("pubYear") or article_data.get("pub_year"),
+            issn= article_data.get("ISSN") or article_data.get("issn"),
+            essn= article_data.get("ESSN") or article_data.get("essn"),
+            cited_order= article_data.get("citedOrder") or article_data.get("cited_order"),
+            match= bool(article_data.get("match")) if article_data.get("match") is not None else None,
         )
 
-    def create_grant_api(self, keyword, record_id):
-        response = self.get_grants(keyword)
+    def create_grant_api(self, gr, record_id):
+
+        person = gr.get("Person") or {}
+        grant_info = gr.get("Grant") or {}
+        institution = gr.get("Institution") or {}
+        funder = grant_info.get("Funder") or {}
+        amount = grant_info.get("Amount") or {}
+
+        person_aliases = person.get("Alias") or []
+        if isinstance(person_aliases, dict):
+            person_aliases = [person_aliases]
         
-        record_list = (response.get("RecordList") or {}).get("Record") or []
-
-        if isinstance(record_list, dict):
-            record_list = [record_list]
-
-        for gr in record_list:
-            person = gr.get("Person") or {}
-            grant_info = gr.get("Grant") or {}
-            institution = gr.get("Institution") or {}
-            funder = grant_info.get("Funder") or {}
-            amount = grant_info.get("Amount") or {}
-
-            person_aliases = person.get("Alias") or []
-            if isinstance(person_aliases, dict):
-                person_aliases = [person_aliases]
-            
-            orcid = ""
-            for alias in person_aliases:
-                if alias.get("Source") == "ORCID":
-                    orcid = alias.get("value")
-                    break
-
-            
-            grants.append(grant)
+        orcid = ""
+        for alias in person_aliases:
+            if alias.get("Source") == "ORCID":
+                orcid = alias.get("value")
+                break
         return Grant(
             id= "",
             record_id= record_id,
@@ -172,12 +162,7 @@ class EuropePMC:
             institution_name= institution.get("Name"),
         )
 
-    def create_fulltext(self, article_data):
-
-        fulltext_data = (article_data.get("fullTextUrlList") or {}).get("fullTextUrl") or []
-        for ft in fulltext_data:
-            
-            fulltext.append(text)
+    def create_fulltext(self, article_data, ft):
         return PMCFullText(
             id= "",
             article_id= article_data.get("id"),
