@@ -2,100 +2,110 @@ from typing import List
 
 from src.clients.epmc import EPMCClient
 
-from src.models.record import Record, RecordType, RecordRequest, Source, Status, ProductType
-from src.models.entities.pmc_article import PMCArticle, PMCArticleFull
+from src.models.entities.pmc_article import PMCArticle
 
 from src.repositories.epmc import EPMCRepo
-from src.repositories.sqlbuilder import SQLBuilder
-from src.repositories.record import Record
+
+from src.models.record import Record, RecordType, Source, Status, ProductType  # Pydantic or DTO, used to build values for RecordEntity if needed
+
 
 class EPMCService:
     def __init__(self, repo: EPMCRepo) -> None:
         self.epmc_repo = repo
         
-    def get_all_articles(self) -> List[PMCArticleFull]:
+    def get_all_articles(self) -> List[PMCArticle]:
         articles = self.epmc_repo.get_all_articles()
-        return [PMCArticleFull.model_validate(article) for article in articles]
+        return articles
 
+    def insert_articles_by_keyword(self, keyword: str, created_by: str, epmc_db: str) -> dict[str, int]:
 
-    def insert_articles_by_keyword(self, keyword: str, created_by: str,
-                                   epmc_db: str) -> dict[str, int]:
         epmc = EPMCClient()
-        pmc_article_fields = set(PMCArticle.model_fields.keys())
-        sql_builder = SQLBuilder.SQLBuilder("pmc_articles").allow_fields(pmc_article_fields - {"id"})
-        epmc_repo = EPMCRepo(epmc_db, )
+
         json_response = epmc.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
-        affiliations_list = [] # fetch all affiliations names in db
-       
+
+        affiliations_seen: set[str] = set()
+
+        counts = {"records": 0, "articles": 0, "grants": 0, "citations": 0, "references": 0, "fulltexts": 0, "authors": 0, "article_authors": 0, "affiliations": 0}
+
         for article in results:
-            
-            existing = epmc_repo.get_by_source_id(article.get("id"))
-            is_update = existing is None
+
+            existing = self.epmc_repo.get_by_source_id(article.get("id"))
+            is_update = existing is not None  # CHANGE: if existing found, we update
 
             # Record
             article_record_model = self.create_record("article", keyword)
-            article_record_id = self.insert_or_update(epmc, article_record_model, is_update)
+            article_record_id = self.insert_or_update(self.epmc_repo, article_record_model, is_update)
 
             # Article
-            article_model = epmc.create_article(article, article_record_id)
-            article_id = self.insert_or_update(epmc, article_model, is_update)
+            article_entity = epmc.create_article(article, article_record_id, created_by=created_by)
+            article_id = self.insert_or_update(self.epmc_repo, article_entity, is_update)
+            counts["articles"] += 1
 
-            # Grants
+            # Grants 
             for grant_data in (article.get("grantsList") or {}).get("grant") or []:
+                grant_record_model = self.create_record("grant", keyword)
+                grant_record_id = self.insert_or_update(self.epmc_repo, grant_record_model, is_update)
 
-                grant_record_model = self.create_record("article", keyword)
-                grant_record_id = self.insert_or_update(epmc, grant_record_model, is_update)
-
-
-                grant_model = epmc.create_grant(article, grant_data, grant_record_id)
-                grant_id = self.insert_or_update(epmc, grant_model, is_update)
+ 
+                grant_entity = epmc.create_grant(grant_data, grant_record_id, created_by=created_by)
+                grant_id = self.insert_or_update(self.epmc_repo, grant_entity, is_update)
+                counts["grants"] += 1
 
             # Citations
-            citation_data = epmc.get_citations()
+
+            citation_data = epmc.get_citations(article.get("id"))
             cite_count = 1
             for cite in (citation_data.get("citationList") or {}).get("citation") or []:
-                citations_model = epmc.create_citation(cite, article.get("id"), cite_count)
-                citation_id = self.insert_or_update(epmc, citations_model, is_update)
+                citation_entity = epmc.create_citation(cite, article_id, cite_count, created_by=created_by)
+                citation_id = self.insert_or_update(self.epmc_repo, citation_entity, is_update)
+                counts["citations"] += 1
                 cite_count += 1
-
 
             # References
             response = epmc.get_references(article.get("id"))
-            reference_data = (response.get("referenceList") or {}).get("reference") or []
+            reference_items = (response.get("referenceList") or {}).get("reference") or []
 
-            if isinstance(reference_data, dict):
-                reference_data = [reference_data]
+            if isinstance(reference_items, dict):
+                reference_items = [reference_items]
 
-            for ref in reference_data:
-                reference_model = epmc.create_reference(article)
-                reference_id = self.insert_or_update(epmc, reference_model, is_update)
+            for ref in reference_items:
+                reference_entity = epmc.create_reference(ref, article_id, created_by=created_by)
+                reference_id = self.insert_or_update(self.epmc_repo, reference_entity, is_update)
+                counts["references"] += 1
 
             # Fulltext
             for ft in (article.get("fullTextUrlList") or {}).get("fullTextUrl") or []:
-                fulltext_model = epmc.create_fulltext(article, ft)
-                fulltext_id = self.insert_or_update(epmc, fulltext_model, is_update)
+                fulltext_entity = epmc.create_fulltext(article_id, ft, created_by=created_by)
+                fulltext_id = self.insert_or_update(self.epmc_repo, fulltext_entity, is_update)
+                counts["fulltexts"] += 1
             
             author_order = 1
             for author in (article.get("authorList") or {}).get("author") or []:
-                
                 # Authors
-                author_model = epmc.create_author(author)
-                author_id = self.insert_or_update(epmc, author_model, is_update)
+                author_entity = epmc.create_author(author, created_by=created_by)
+                author_id = self.insert_or_update(self.epmc_repo, author_entity, is_update)
+                counts["authors"] += 1
 
                 # Article_authors
-                articles_authors_model =epmc.create_article_author(article, author, author_order, author_id)
-                articles_authors_id = self.insert_or_update(epmc, articles_authors_model, is_update)
+                article_author_entity = epmc.create_article_author(article_id, author_id, author_order, created_by=created_by)
+                article_author_id = self.insert_or_update(self.epmc_repo, article_author_entity, is_update)
+                counts["article_authors"] += 1
 
-                author_order +=1
+                author_order += 1
                 
                 # Affiliations
+                aff_order = 1
                 for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
                     org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
-                    if org_name not in affiliations_list:
-                        affiliation_model = epmc.create_affiliation(aff, author_id)
-                        affiliation_id = self.insert_or_update(epmc, affiliation_model, is_update)
+                    if org_name and org_name not in affiliations_seen:
+                        affiliation_entity = epmc.create_affiliation(aff, author_id, article_id, aff_order, created_by=created_by)
+                        affiliation_id = self.insert_or_update(self.epmc_repo, affiliation_entity, is_update)
+                        counts["affiliations"] += 1
+                        affiliations_seen.add(org_name)
+                        aff_order += 1
 
+        return counts
 
     def create_grants(self, repo: EPMCRepo, client: EPMCClient, keyword):
         # grants api
@@ -106,27 +116,30 @@ class EPMCService:
             record_list = [record_list]
 
         for gr in record_list:
-            is_update = False #todo
+            is_update = False  # TODO: Implement proper upsert detection (by grant_id, etc.)
 
-            grant_api_model = client.create_grant_api(gr)
-            self.insert_or_update(repo, grant_api_model, is_update)
+            grant_record_model = self.create_record("grant", keyword)
+            grant_record_id = self.insert_or_update(self.epmc_repo, grant_record_model, is_update)
 
-    def create_record(self, type, keyword):
+            grant_api_entity = client.create_grant_api(gr, grant_record_id)
+            self.insert_or_update(repo, grant_api_entity, is_update)
+
+    def create_record(self, type: str, keyword: str) -> Record:
         return Record(
-            id= "",
-            record_type= RecordType.ARTICLE if type=="article" else RecordType.GRANT,
-            source= Source.EUROPE_PMC,
-            status= Status.APPROVED,
-            keyword= [keyword],
-            product_line= ProductType.IMPLEMENTATION,
-            created_by= "",
-            updated_by= "",
-            version= 1 )
+            id="",  
+            record_type=RecordType.ARTICLE if type == "article" else RecordType.GRANT,
+            source=Source.EUROPE_PMC,
+            status=Status.APPROVED,
+            keyword=[keyword],
+            product_line=ProductType.IMPLEMENTATION,
+            created_by="",
+            updated_by="",
+            version=1,
+        )
 
-    def insert_or_update(self, repo: EPMCRepo, model, update):
+    def insert_or_update(self, repo: EPMCRepo, entity, update: bool):
         if update:
-            id = repo.update(model)
+            entity_id = repo.update(entity)
         else:
-            id = repo.insert(model)
-        return id
-                        
+            entity_id = repo.insert(entity)
+        return entity_id

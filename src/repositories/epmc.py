@@ -1,11 +1,10 @@
 from datetime import datetime
+from typing import Any, Optional, Type, List
 
-from src.models.pmc_article import PMCArticleFull as ArticleModel
 from src.models.entities.pmc_article import PMCArticle
-from .setup import DatabaseConnection
-from .sqlbuilder import SQLBuilder
+
 import json
-from typing import List, Optional, Type
+
 from sqlalchemy.orm import Session, selectinload
 
 # Reusable ORM entities for cross-table queries
@@ -21,70 +20,41 @@ class EPMCRepo:
     '''
     
     def __init__(self, db: Session):
-        # Keep a single instance of the repo; pass entity_cls/model_cls per call for reusability
+        # CHANGE: Keep a single repo instance; pass entity_cls per method call for reusability.
         self.db = db
     
-    def insert(self, article: ArticleModel, entity_cls: Type[PMCArticle] = PMCArticle) -> int:
-        # SQLAlchemy ORM insert: create an entity instance from the Pydantic model, excluding non-column fields.
-        # Build exclude set dynamically: anything on the Pydantic model that is not an attribute on the ORM entity.
-        exclude_fields = {name for name in article.__class__.model_fields.keys() if not hasattr(entity_cls, name)}
-        exclude_fields.add("id")  # let DB autogenerate PK
-
-        data = article.model_dump(exclude=exclude_fields)
-        # Keep only fields that are mapped columns on the entity
-        filtered = {k: v for k, v in data.items() if hasattr(entity_cls, k)}
-
-        obj = entity_cls(**filtered)
-        self.db.add(obj)
+    def insert(self, entity: Any, entity_cls: Type[PMCArticle] = PMCArticle) -> int:
+        # CHANGE: ORM-only insert. Expect an ORM entity instance.
+        # Reason: Client now returns ORM objects; we no longer handle Pydantic dict conversion.
+        if not isinstance(entity, entity_cls):
+            raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
+        self.db.add(entity)
         self.db.commit()
-        self.db.refresh(obj)
-        return obj.id
+        self.db.refresh(entity)
+        return entity.id
 
-    def update(self, article: ArticleModel, entity_cls: Type[PMCArticle] = PMCArticle) -> None:
-        # SQLAlchemy ORM update: fetch the row and set attributes from the Pydantic model
-        db_obj = self.db.get(entity_cls, article.id)
-        if not db_obj:
-            return
-
-        exclude_fields = {name for name in article.__class__.model_fields.keys() if not hasattr(entity_cls, name)}
-        exclude_fields.add("id")
-
-        data = article.model_dump(exclude=exclude_fields)
-        for k, v in data.items():
-            if hasattr(entity_cls, k):
-                setattr(db_obj, k, v)
-
+    def update(self, entity: Any, entity_cls: Type[PMCArticle] = PMCArticle) -> Optional[int]:
+        # CHANGE: ORM-only update. Merge the given entity and commit.
+        if not isinstance(entity, entity_cls):
+            raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
+        merged = self.db.merge(entity)
         self.db.commit()
+        return getattr(merged, "id", None)
 
-    def get_by_id(
-        self,
-        article_id: int,
-        entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> ArticleModel | None:
-        # ORM lookup by primary key on the provided entity class
-        db_obj = self.db.get(entity_cls, article_id)
-        return model_cls.model_validate(db_obj) if db_obj else None
+    def get_by_id(self, entity_id: int, entity_cls: Type[PMCArticle] = PMCArticle):
+        # CHANGE: Return ORM entity (no Pydantic validation).
+        return self.db.get(entity_cls, entity_id)
 
-    def get_by_source_id(
-        self,
-        source_id: str,
-        entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> ArticleModel | None:
-        # ORM query by source/source_id; choose whichever column exists on the entity
-        # If your entity uses `source` instead of `source_id`, this will gracefully use `source`
-        source_column = getattr(entity_cls, "source_id", getattr(entity_cls, "source", None))
-        if source_column is None:
-            # comment: set the correct column name here if neither source_id nor source exists on your entity
-            raise AttributeError(f"{entity_cls.__name__} has no 'source_id' or 'source' column")
-
-        db_obj = (
+    def get_by_source_id(self, source_id: str, entity_cls: Type[PMCArticle] = PMCArticle):
+        # CHANGE: Use pm_id or pmc_id (PMCArticle has no source_id column).
+        id_column = getattr(entity_cls, "pm_id", getattr(entity_cls, "pmc_id", None))
+        if id_column is None:
+            raise AttributeError(f"{entity_cls.__name__} has no 'pm_id' or 'pmc_id' column")
+        return (
             self.db.query(entity_cls)
-            .filter(source_column == source_id)
+            .filter(id_column == source_id)
             .first()
         )
-        return model_cls.model_validate(db_obj) if db_obj else None
 
     def get_by_author_name(
         self,
@@ -92,13 +62,11 @@ class EPMCRepo:
         firstname: str,
         lastname: str,
         entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> ArticleModel | None:
-        # ORM query joining authors to articles via the association table
-        # NOTE: This assumes the entity being queried is PMCArticle (has id column referenced by ArticleAuthor.article_id).
-        db_obj = (
+    ):
+        # CHANGE: Use entity_cls.id in joins (avoid hard-coding PMCArticle.id) for reusability.
+        return (
             self.db.query(entity_cls)
-            .join(ArticleAuthor, ArticleAuthor.article_id == PMCArticle.id)  # comment: adjust if using a different entity with a different PK
+            .join(ArticleAuthor, ArticleAuthor.article_id == entity_cls.id)
             .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
             .filter(
                 PMCAuthor.fullname == fullname,
@@ -107,23 +75,15 @@ class EPMCRepo:
             )
             .first()
         )
-        return model_cls.model_validate(db_obj) if db_obj else None
 
-    def get_by_keyword(
-        self,
-        keyword: str,
-        entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> list[ArticleModel]:
-        # ORM query joining Keyword relationship and filtering on PostgreSQL ARRAY column
-        # WHERE %s = ANY(r.keyword) → Keyword.value.any(keyword)
-        rows = (
+    def get_by_keyword(self, keyword: str, entity_cls: Type[PMCArticle] = PMCArticle) -> list:
+        # CHANGE: Keyword.value is a PostgreSQL ARRAY(String); use .any(keyword) to emulate '= ANY(array)'.
+        return (
             self.db.query(entity_cls)
-            .join(Keyword, Keyword.article_id == PMCArticle.id)  # comment: Keyword.article_id references PMCArticle.id
+            .join(Keyword, Keyword.article_id == entity_cls.id)
             .filter(Keyword.value.any(keyword))
             .all()
         )
-        return [model_cls.model_validate(row) for row in rows]
 
     def get_by_keyword_and_date(
         self,
@@ -131,52 +91,44 @@ class EPMCRepo:
         start_date: datetime,
         end_date: datetime,
         entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> list[ArticleModel]:
-        # ORM query by keyword and date range; choose the correct date column on the entity
-        # Default to PMCArticle.first_publication_date (adjust if your entity uses a different date field)
+    ) -> list:
+        # CHANGE: Use a real date column; PMCArticle has 'first_publication_date'.
+        # If your entity uses a different date field, update here.
         date_column = getattr(entity_cls, "first_publication_date", None)
         if date_column is None:
-            # comment: set to the correct date column (e.g., entity_cls.publish_date) if different
-            raise AttributeError(f"{entity_cls.__name__} has no 'first_publication_date' column")
-
-        rows = (
+            date_column = getattr(entity_cls, "date_of_creation")  # fallback
+        return (
             self.db.query(entity_cls)
-            .join(Keyword, Keyword.article_id == PMCArticle.id)
+            .join(Keyword, Keyword.article_id == entity_cls.id)
             .filter(
                 Keyword.value.any(keyword),
                 date_column.between(start_date, end_date),
             )
             .all()
         )
-        return [model_cls.model_validate(row) for row in rows]
 
     def get_by_keyword_and_status(
         self,
         keyword: str,
         status: str,
         entity_cls: Type[PMCArticle] = PMCArticle,
-        model_cls: Type[ArticleModel] = ArticleModel
-    ) -> list[ArticleModel]:
-        # ORM query by keyword and publication status; identify the right status column
-        status_column = getattr(entity_cls, "publication_status", None)
+    ) -> list:
+        # CHANGE: PMCArticle uses 'publication_status'. Fallback to 'status' if present for other entities.
+        status_column = getattr(entity_cls, "publication_status", getattr(entity_cls, "status", None))
         if status_column is None:
-            # comment: set to the correct status column (e.g., entity_cls.status) if your entity differs
-            raise AttributeError(f"{entity_cls.__name__} has no 'publication_status' column")
-
-        rows = (
+            raise AttributeError(f"{entity_cls.__name__} has no 'publication_status' or 'status' column")
+        return (
             self.db.query(entity_cls)
-            .join(Keyword, Keyword.article_id == PMCArticle.id)
+            .join(Keyword, Keyword.article_id == entity_cls.id)
             .filter(
                 Keyword.value.any(keyword),
                 status_column == status,
             )
             .all()
         )
-        return [model_cls.model_validate(row) for row in rows]
         
 
-def get_all_articles_old(self) -> list[ArticleModel]:
+def get_all_articles_old(self) -> list[PMCArticle]:
     query = """
     SELECT jsonb_build_object(
         'id', a.id,
@@ -307,7 +259,7 @@ def get_all_articles_old(self) -> list[ArticleModel]:
         cur.execute(query)
         rows = cur.fetchall()
 
-    return [ArticleModel.model_validate(row[0]) for row in rows]
+    return [PMCArticle.model_validate(row[0]) for row in rows]
 
 def get_all_articles(self) -> list[PMCArticle]:
         """

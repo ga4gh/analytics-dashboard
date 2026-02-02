@@ -1,9 +1,12 @@
 # main.py
-import imp
+# import imp
 import os
 import logging
 import uvicorn
 from fastapi import FastAPI
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 
 # config
 from .config.constants import GH_BASE_URL
@@ -43,22 +46,25 @@ from .routers.health import router as health_router
 
 from contextlib import asynccontextmanager
 
-from repositories.epmc import EPMCRepo
-from services.epmc import EPMCService
-from clients.epmc import EPMCClient
+from src.repositories.epmc import EPMCRepo
+from src.services.epmc import EPMCService
+from src.clients.epmc import EPMCClient
+
 
 def main() -> FastAPI:
     app = FastAPI()
 
     # DB setup
-    db_conn = setup.DatabaseConnection(config.database_url)
-    db_conn.connect()
-    logger.info("Database connected")
+
+    engine = create_engine(config.database_url, pool_pre_ping=True, future=True)  
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)   
+    session: Session = SessionLocal()                                             
+    logger.info("Database connected via SQLAlchemy ORM")                          
 
     epmc_client = EPMCClient()
-    epmc_repo = EPMCRepo(db_conn)
+    epmc_repo = EPMCRepo(session)                        
     epmc_service = EPMCService(epmc_repo)
-    epmc_service.insert_articles_by_keyword("ga4gh", "system", db_conn)
+    epmc_service.insert_articles_by_keyword("ga4gh", "system", session)  
 
     '''   
     record_fields = set(Record.model_fields.keys())

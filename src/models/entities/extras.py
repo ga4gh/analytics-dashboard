@@ -41,6 +41,8 @@ class Grant(Base):
 
     family_name: Mapped[Optional[str]] = mapped_column(Text)
     given_name: Mapped[Optional[str]] = mapped_column(Text)
+    initials: Mapped[Optional[str]] = mapped_column(Text)
+    alias: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String))
     orcid: Mapped[Optional[str]] = mapped_column(Text)
 
     funder_name: Mapped[Optional[str]] = mapped_column(Text)

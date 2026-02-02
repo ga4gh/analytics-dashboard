@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from src.models.pmc_article import PMCArticle as Article, PMCFullText, PMCCitation, PMCReference
-from src.models.pmc_author import PMCAuthor as Author, PMCAffiliation as Affiliation, ArticleAuthor
-from src.models.grant import Grant
+
+from src.models.entities.pmc_article import PMCArticle
+from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
+from src.models.entities.extras import FullText, Grant
+from src.models.entities.citations import Citation, Reference
 
 import requests
 import pandas as pd
@@ -17,124 +19,182 @@ class EPMCClient:
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
-    def create_article(self, article_data, id):
-        return Article(
-            id=id,
-            record_id=id,
-            Source=article_data.get("source"),
-            Pm_id=article_data.get("id"),
-            Pmc_id=article_data.get("pmcid"),
-            Full_text_id="",
-            Doi=article_data.get("doi"),
-            Title=article_data.get("title"),
-            Pub_year=article_data.get("pubYear"),
-            Abstract_text=article_data.get("abstractText"),
-            Affiliation=article_data.get("affiliation"),
-            Publicication_status=article_data.get("publicationStatus"),
-            Language=article_data.get("language"),
-            Pub_type=(article_data.get("pubTypeList") or {}).get("pubType"),
-            Is_open_access=bool(article_data.get("isOpenAccess")),
-            inEPMC=bool(article_data.get("inEPMC")),
-            inPMC=bool(article_data.get("inPMC")),
-            hasPDF=bool(article_data.get("hasPDF")),
-            hasBook=bool(article_data.get("hasBook")),
-            hasSuppl=bool(article_data.get("hasSuppl")),
-            Cited_by_count=article_data.get("citedByCount"),
-            Has_references=bool(article_data.get("hasReferences")),
-            Dateofcreation=article_data.get("dateOfCreation"),
-            firstIndexdate=article_data.get("firstIndexDate"),
-            Fulltextreceivedate=article_data.get("fullTextReceivedDate"),
-            Revisiondate=article_data.get("dateOfRevision"),
-            Epubdate=article_data.get("electronicPublicationDate"),
-            Firstpublicationdate=article_data.get("firstPublicationDate"),
+    def create_article(self, article_data, id, created_by: str = "system") -> PMCArticle:
+        return PMCArticle(
+            id=None,  
+            record_id=id,  
+            source=article_data.get("source", ""),
+            pm_id=article_data.get("id"),
+            pmc_id=article_data.get("pmcid", "") or "",
+            full_text_id="",
+            doi=article_data.get("doi", "") or "",
+            title=article_data.get("title", "") or "",
+            pub_year=int(article_data.get("pubYear") or 0),
+            abstract_text=article_data.get("abstractText", "") or "",
+            affiliation=article_data.get("affiliation", "") or "",
+            publication_status=article_data.get("publicationStatus", "") or "",
+            language=article_data.get("language", "") or "",
+            pub_type=((article_data.get("pubTypeList") or {}).get("pubType") or None),
+            is_open_access=bool(article_data.get("isOpenAccess")),
+            inepmc=bool(article_data.get("inEPMC")),  
+            inpmc=bool(article_data.get("inPMC")),    
+            has_pdf=bool(article_data.get("hasPDF")),
+            has_book=bool(article_data.get("hasBook")),
+            has_suppl=bool(article_data.get("hasSuppl")),
+            cited_by_count=int(article_data.get("citedByCount") or 0),
+            has_references=bool(article_data.get("hasReferences")),
+            date_of_creation=_parse_dt(article_data.get("dateOfCreation")),
+            first_index_date=_parse_dt(article_data.get("firstIndexDate")),
+            fulltext_receive_date=_parse_dt(article_data.get("fullTextReceivedDate")),
+            revision_date=_parse_dt(article_data.get("dateOfRevision")),
+            epub_date=_parse_dt(article_data.get("electronicPublicationDate")),
+            first_publication_date=_parse_dt(article_data.get("firstPublicationDate")),
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_author(self, author_data):
-        return Author(
-            id= "",
-            fullname= author_data.get("fullName"),
-            firstname= author_data.get("firstName"),
-            lastname= author_data.get("lastName"),
-            initials= author_data.get("initials"),
-            orcid= (author_data.get("authorId") or {}).get("value"),
+    def create_author(self, author_data, created_by: str = "system") -> PMCAuthor:
+        author_order = int(author_data.get("authorOrder") or 0)
+        return PMCAuthor(
+            id=None,
+            fullname=author_data.get("fullName", "") or "",
+            firstname=author_data.get("firstName"),
+            lastname=author_data.get("lastName"),
+            initials=author_data.get("initials"),
+            orcid=(author_data.get("authorId") or {}).get("value"),
+            author_order=author_order,
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_article_author(self, article_data, author_data, author_order, author_id):
-        
+    def create_article_author(
+        self,
+        article_id: int,
+        author_id: int,
+        author_order: int,
+        created_by: str = "system",
+    ) -> ArticleAuthor:
         return ArticleAuthor(
-            id= "",
-            article_id= article_data.get("id") or article_data.get("pmid"),
-            author_id= author_id,
-            author_order= author_order 
+            id=None,
+            article_id=article_id,
+            author_id=author_id,
+            author_order=author_order,
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_affiliation(self, affiliation_data, author_id):
+    def create_affiliation(
+        self,
+        affiliation_data,
+        author_id: int,
+        article_id: int,
+        affiliation_order: int,
+        created_by: str = "system",
+    ) -> PMCAffiliation:
         org_name = affiliation_data.get("affiliation") if isinstance(affiliation_data, dict) else affiliation_data
-        
-        return Affiliation(
-            id= "",
-            author_id= author_id,
-            org_name= org_name
+        return PMCAffiliation(
+            id=None,
+            author_id=author_id,
+            article_id=article_id,
+            org_name=org_name,
+            affiliation_order=affiliation_order,
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_grant(self, article_data, record_id):
-            
+    def create_grant(self, article_data, record_id: int, created_by: str = "system") -> Grant:
         return Grant(
-            id= "",
-            record_id = record_id,
-            article_id= article_data.get("id") or article_data.get("pmid"),
-            grant_id= article_data.get("grantId") or article_data.get("grant_id"),
-            agency= article_data.get("agency"),
-            family_name= "",
-            given_name= "",
-            orcid= "",
-            funder_name= "",
-            grant= "", 
-            doi= "",
-            title= "",
-            start_date= "",
-            end_date= "",
-            institution_name= "",
+            id=None,
+            record_id=record_id,
+            grant_id=article_data.get("grantId") or article_data.get("grant_id"),
+            agency=article_data.get("agency"),
+            family_name=None,
+            given_name=None,
+            orcid=None,
+            funder_name=None,
+            doi=None,
+            title=None,
+            start_date=_parse_dt(article_data.get("startDate")),
+            end_date=_parse_dt(article_data.get("endDate")),
+            institution_name=None,
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_citation(self, cite, pmid, count):
+    def create_citation(self, cite, article_id: int, count: int, created_by: str = "system") -> Citation:
 
-        return PMCCitation(
-            id= "",
-            article_id= pmid,
-            citation_id= cite.get("id"),
-            source= cite.get("source"),
-            citation_type= cite.get("citationType") or cite.get("citation_type"),
-            title= cite.get("title"),
-            authors= cite.get("authors"),
-            pub_year= cite.get("pubYear") or cite.get("pub_year"),
-            citation_count= count,
+        return Citation(
+            id=None,
+            article_id=article_id,
+            citation_id=str(cite.get("id")) if cite.get("id") is not None else None,
+            source=cite.get("source"),
+            citation_type=cite.get("citationType") or cite.get("citation_type"),
+            title=cite.get("title"),
+            authors=cite.get("authors"),
+            pub_year=int(cite.get("pubYear") or cite.get("pub_year") or 0),
+            citation_count=int(count),
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_reference(self, article_data):
-
-        return PMCReference(
-            id= "",
-            article_id= article_data.get("id"),
-            reference_id= article_data.get("id"),
-            source= article_data.get("source"),
-            citation_type= article_data.get("citationType") or article_data.get("citation_type"),
-            title= article_data.get("title"),
-            authors= article_data.get("authors"),
-            pub_year= article_data.get("pubYear") or article_data.get("pub_year"),
-            issn= article_data.get("ISSN") or article_data.get("issn"),
-            essn= article_data.get("ESSN") or article_data.get("essn"),
-            cited_order= article_data.get("citedOrder") or article_data.get("cited_order"),
-            match= bool(article_data.get("match")) if article_data.get("match") is not None else None,
+    def create_reference(self, ref, article_id: int, created_by: str = "system") -> Reference:
+        return Reference(
+            id=None,
+            article_id=article_id,
+            reference_id=str(ref.get("id")) if ref.get("id") is not None else None,
+            source=ref.get("source"),
+            citation_type=ref.get("citationType") or ref.get("citation_type"),
+            title=ref.get("title"),
+            authors=ref.get("authors"),
+            pub_year=int(ref.get("pubYear") or ref.get("pub_year") or 0),
+            issn=ref.get("ISSN") or ref.get("issn"),
+            essn=ref.get("ESSN") or ref.get("essn"),
+            cited_order=int(ref.get("citedOrder") or ref.get("cited_order") or 0),
+            match=bool(ref.get("match")) if ref.get("match") is not None else False,
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_grant_api(self, gr, record_id):
-
+    def create_grant_api(self, gr, record_id: int, created_by: str = "system") -> Grant:
         person = gr.get("Person") or {}
         grant_info = gr.get("Grant") or {}
         institution = gr.get("Institution") or {}
         funder = grant_info.get("Funder") or {}
-        amount = grant_info.get("Amount") or {}
 
         person_aliases = person.get("Alias") or []
         if isinstance(person_aliases, dict):
@@ -143,34 +203,48 @@ class EPMCClient:
         orcid = ""
         for alias in person_aliases:
             if alias.get("Source") == "ORCID":
-                orcid = alias.get("value")
+                orcid = alias.get("value") or ""
                 break
+
         return Grant(
-            id= "",
-            record_id= record_id,
-            grant_id= grant_info.get("Id"),
-            agency= funder.get("Name"),
-            family_name= person.get("FamilyName"),
-            given_name= person.get("GivenName"),
-            orcid= orcid,
-            funder_name= funder.get("Name"),
-            grant= grant_info.get("Title"), 
-            doi= grant_info.get("Doi"),
-            title= grant_info.get("Title"),
-            start_date= grant_info.get("StartDate"),
-            end_date= grant_info.get("EndDate"),
-            institution_name= institution.get("Name"),
+            id=None,
+            record_id=record_id,
+            grant_id=grant_info.get("Id"),
+            agency=funder.get("Name"),
+            family_name=person.get("FamilyName"),
+            given_name=person.get("GivenName"),
+            orcid=orcid or None,
+            funder_name=funder.get("Name"),
+            doi=grant_info.get("Doi"),
+            title=grant_info.get("Title"),
+            start_date=_parse_dt(grant_info.get("StartDate")),
+            end_date=_parse_dt(grant_info.get("EndDate")),
+            institution_name=institution.get("Name"),
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
-    def create_fulltext(self, article_data, ft):
-        return PMCFullText(
-            id= "",
-            article_id= article_data.get("id"),
-            availability= ft.get("availability"),
-            availability_code= ft.get("availabilityCode"),
-            document_style= ft.get("documentStyle"),
-            site= ft.get("site"),
-            url= ft.get("url"),
+    def create_fulltext(self, article_id: int, ft, created_by: str = "system") -> FullText:
+        return FullText(
+            id=None,
+            article_id=article_id,
+            availability=ft.get("availability"),
+            availability_code=ft.get("availabilityCode"),
+            document_style=ft.get("documentStyle"),
+            site=ft.get("site"),
+            url=ft.get("url"),
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            updated_by=created_by,
+            updated_at=datetime.utcnow(),
+            deleted_by=None,
+            deleted_at=None,
+            version=1,
         )
 
     def get_articles(self, keyword):
@@ -269,3 +343,12 @@ class EPMCClient:
         df.to_csv(path)
         print(f"Wrote CSV: {path}")
         return path
+
+
+def _parse_dt(value: Optional[str]) -> datetime:
+    if not value:
+        return datetime.utcnow()
+    try:
+        return datetime.fromisoformat(value)
+    except Exception:
+        return datetime.utcnow()

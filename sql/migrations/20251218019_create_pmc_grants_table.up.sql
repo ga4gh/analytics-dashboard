@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS grants (
     agency TEXT,
     family_name TEXT,
     given_name TEXT,
+    initials TEXT,
+    alias TEXT[],
     orcid TEXT,
     funder_name TEXT,
     doi TEXT,
