@@ -43,6 +43,7 @@ from .routers.pubmed import Pubmed as PubmedRouter
 from .services.pubmed import Pubmed as PubmedService
 
 from .routers.health import router as health_router
+from .routers.epmc import EPMC as EPMCRouter
 
 from contextlib import asynccontextmanager
 
@@ -60,11 +61,6 @@ def main() -> FastAPI:
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)   
     session: Session = SessionLocal()                                             
     logger.info("Database connected via SQLAlchemy ORM")                          
-
-    epmc_client = EPMCClient()
-    epmc_repo = EPMCRepo(session)                        
-    epmc_service = EPMCService(epmc_repo)
-    epmc_service.insert_articles_by_keyword("ga4gh", "system", session)  
 
     '''   
     record_fields = set(Record.model_fields.keys())
@@ -125,6 +121,12 @@ def main() -> FastAPI:
     
     app.include_router(health_router)
         '''
+
+    epmc_repo = EPMCRepo(session)
+    epmc_service = EPMCService(epmc_repo)
+    epmc_router = EPMCRouter(epmc_service)
+    app.include_router(epmc_router.router)
+
     return app
 
 

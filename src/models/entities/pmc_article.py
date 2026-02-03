@@ -122,3 +122,32 @@ class PMCArticle(Base):
     references: Mapped[List["Reference"]] = relationship(
         cascade="all, delete-orphan"
     )
+
+class PMCArticleFull(PMCArticle):
+
+    authors: Mapped[List["PMCAuthor"]] = relationship(
+        "PMCAuthor",
+        secondary="articles_authors",
+        primaryjoin="PMCArticle.id == ArticleAuthor.article_id",
+        secondaryjoin="PMCAuthor.id == ArticleAuthor.author_id",
+        viewonly=True,
+    )
+
+    affiliations: Mapped[List["PMCAffiliation"]] = relationship(
+        "PMCAffiliation",
+        primaryjoin="PMCArticle.id == PMCAffiliation.article_id",
+        viewonly=True,
+        order_by="PMCAffiliation.affiliation_order",
+    )
+
+    keywords: Mapped[List["Keyword"]] = relationship(
+        "Keyword",
+        primaryjoin="PMCArticle.id == Keyword.article_id",
+        viewonly=True,
+    )
+
+    grants: Mapped[List["Grant"]] = relationship(
+        "Grant",
+        primaryjoin="PMCArticle.record_id == Grant.record_id",
+        viewonly=True,
+    )

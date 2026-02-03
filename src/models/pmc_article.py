@@ -3,113 +3,151 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import (
-    String,
-    Integer,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Text,
-)
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Base(DeclarativeBase):
-    pass
+from pydantic import BaseModel, Field, ConfigDict
 
 
-class PMCArticle(Base):
-    __tablename__ = "pmc_articles"
+class PMCFullText(BaseModel):
+    id: Optional[int] = None
+    article_id: Optional[int] = None
+    availability: str
+    availability_code: str
+    document_style: str
+    site: str
+    url: str
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    record_id: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    source: Mapped[str] = mapped_column(String(100), nullable=False)
-    pm_id: Mapped[Optional[str]] = mapped_column(String(50))
-    pmc_id: Mapped[str] = mapped_column(String(50), nullable=False)
-    full_text_id: Mapped[str] = mapped_column(String(50), nullable=False)
-    doi: Mapped[str] = mapped_column(String(200), nullable=False)
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    pub_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    abstract_text: Mapped[str] = mapped_column(Text, nullable=False)
-    affiliation: Mapped[str] = mapped_column(Text, nullable=False)
-    publicication_status: Mapped[str] = mapped_column(String(50), nullable=False)
-    language: Mapped[str] = mapped_column(String(20), nullable=False)
-    pub_type: Mapped[Optional[str]] = mapped_column(String(100))
-
-    is_open_access: Mapped[bool] = mapped_column(Boolean, default=False)
-    inEPMC: Mapped[bool] = mapped_column(Boolean, default=False)
-    inPMC: Mapped[bool] = mapped_column(Boolean, default=False)
-    hasPDF: Mapped[bool] = mapped_column(Boolean, default=False)
-    hasBook: Mapped[bool] = mapped_column(Boolean, default=False)
-    hasSuppl: Mapped[bool] = mapped_column(Boolean, default=False)
-    cited_by_count: Mapped[int] = mapped_column(Integer, default=0)
-    has_references: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    dateofcreation: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    firstIndexdate: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    fulltextreceivedate: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    revisiondate: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    epubdate: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    firstpublicationdate: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-    # Relationships (examples)
-    fulltexts: Mapped[List["PMCFullText"]] = relationship(
-        back_populates="article", cascade="all, delete-orphan"
-    )
-    citations: Mapped[List["PMCCitation"]] = relationship(
-        back_populates="article", cascade="all, delete-orphan"
-    )
-    references: Mapped[List["PMCReference"]] = relationship(
-        back_populates="article", cascade="all, delete-orphan"
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PMCFullText(Base):
-    __tablename__ = "pmc_fulltexts"
+class PMCCitation(BaseModel):
+    id: Optional[int] = None
+    article_id: Optional[int] = None
+    citation_id: Optional[str] = None  
+    source: str
+    citation_type: str
+    title: str
+    authors: str
+    pub_year: int
+    citation_count: int = 0
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    article_id: Mapped[Optional[int]] = mapped_column(ForeignKey("pmc_articles.id"))
-    availability: Mapped[str] = mapped_column(String(100), nullable=False)
-    availability_code: Mapped[str] = mapped_column(String(50), nullable=False)
-    document_style: Mapped[str] = mapped_column(String(50), nullable=False)
-    site: Mapped[str] = mapped_column(String(100), nullable=False)
-    url: Mapped[str] = mapped_column(Text, nullable=False)
-
-    article: Mapped[Optional[PMCArticle]] = relationship(back_populates="fulltexts")
-
-
-class PMCCitation(Base):
-    __tablename__ = "pmc_citations"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    article_id: Mapped[Optional[int]] = mapped_column(ForeignKey("pmc_articles.id"))
-    citation_id: Mapped[Optional[int]] = mapped_column(Integer)
-    source: Mapped[str] = mapped_column(String(100), nullable=False)
-    citation_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    authors: Mapped[str] = mapped_column(Text, nullable=False)
-    pub_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    citation_count: Mapped[int] = mapped_column(Integer, default=0)
-
-    article: Mapped[Optional[PMCArticle]] = relationship(back_populates="citations")
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PMCReference(Base):
-    __tablename__ = "pmc_references"
+class PMCReference(BaseModel):
+    id: Optional[int] = None
+    article_id: Optional[int] = None
+    reference_id: Optional[str] = None  
+    source: str
+    citation_type: str
+    title: str
+    authors: str
+    pub_year: int
+    issn: Optional[str] = None
+    essn: Optional[str] = None
+    cited_order: Optional[int] = None
+    match: Optional[bool] = None
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    article_id: Mapped[Optional[int]] = mapped_column(ForeignKey("pmc_articles.id"))
-    reference_id: Mapped[Optional[int]] = mapped_column(Integer)
-    source: Mapped[str] = mapped_column(String(100), nullable=False)
-    citation_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    authors: Mapped[str] = mapped_column(Text, nullable=False)
-    pub_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    issn: Mapped[str] = mapped_column(String(20), nullable=False)
-    essn: Mapped[str] = mapped_column(String(20), nullable=False)
-    cited_order: Mapped[int] = mapped_column(Integer, nullable=False)
-    match: Mapped[str] = mapped_column(String(50), nullable=False)
+    model_config = ConfigDict(from_attributes=True)
 
-    article: Mapped[Optional[PMCArticle]] = relationship(back_populates="references")
 
+class Keyword(BaseModel):
+    id: Optional[int] = None
+    article_id: int
+    value: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+class Grant(BaseModel):
+    id: Optional[int] = None
+    record_id: int
+    grant_id: Optional[str] = None
+    agency: Optional[str] = None
+
+    family_name: Optional[str] = None
+    given_name: Optional[str] = None
+    initial: Optional[str] = None
+    alias: Optional[List[str]] = None
+    orcid: Optional[str] = None
+
+    funder_name: Optional[str] = None
+    doi: Optional[str] = None
+    title: Optional[str] = None
+
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    institution_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PMCAffiliation(BaseModel):
+    id: Optional[int] = None
+    author_id: int
+    article_id: int
+    org_name: Optional[str] = None
+    affiliation_order: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PMCAuthor(BaseModel):
+    id: Optional[int] = None
+    fullname: str
+    firstname: Optional[str] = None
+    lastname: Optional[str] = None
+    initials: Optional[str] = None
+    orcid: Optional[str] = None
+    author_order: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PMCArticle(BaseModel):
+
+    id: Optional[int] = None
+    record_id: int
+
+    source: str
+    pm_id: Optional[str] = None
+    pmc_id: str
+    full_text_id: str
+    doi: str
+    title: str
+    pub_year: int
+    abstract_text: str
+    affiliation: str
+    publication_status: str  
+    language: str
+    pub_type: Optional[str] = None
+
+    is_open_access: bool = False
+    inepmc: bool = False
+    inpmc: bool = False
+    has_pdf: bool = False
+    has_book: bool = False
+    has_suppl: bool = False
+
+    cited_by_count: int = 0
+    has_references: bool = False
+
+    date_of_creation: Optional[datetime] = None
+    first_index_date: Optional[datetime] = None
+    fulltext_receive_date: Optional[datetime] = None
+    revision_date: Optional[datetime] = None
+    epub_date: Optional[datetime] = None
+    first_publication_date: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PMCArticleFull(PMCArticle):
+    authors: List[PMCAuthor] = Field(default_factory=list)
+    affiliations: List[PMCAffiliation] = Field(default_factory=list)
+    keywords: List[Keyword] = Field(default_factory=list)
+    grants: List[Grant] = Field(default_factory=list)
+    fulltexts: List[PMCFullText] = Field(default_factory=list)
+    citations: List[PMCCitation] = Field(default_factory=list)
+    references: List[PMCReference] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)

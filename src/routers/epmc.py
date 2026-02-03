@@ -16,13 +16,13 @@ class EPMC:
         self._setup_routes()
 
     def _setup_routes(self):
-        @self.router.get("/all-articles", response_model=list[PMCArticleFull])
+        @self.router.get("/epmc/all-articles", response_model=list[PMCArticleFull])
         async def get_all_articles(db: Session = Depends(get_session)):
             repo = EPMCRepo(db)
             service = EPMCService(repo)
             return service.get_all_articles()
 
-        @self.router.post("/ingest-pmc-data", response_model=list[PMCArticleFull])
+        @self.router.post("/epmc/ingest-pmc-data", response_model=list[PMCArticleFull])
         async def ingest_pmc_data(
             keyword: str = Body(..., embed=True),  
             db: Session = Depends(get_session),
