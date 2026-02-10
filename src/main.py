@@ -127,6 +127,8 @@ def main() -> FastAPI:
     epmc_router = EPMCRouter(epmc_service)
     app.include_router(epmc_router.router)
 
+    epmc_service.insert_articles_by_keyword("ga4gh", created_by="system", epmc_db=session)
+
     return app
 
 
