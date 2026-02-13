@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -19,7 +19,6 @@ class PMCAuthor(Base):
     lastname: Mapped[Optional[str]] = mapped_column(String(128))
     initials: Mapped[Optional[str]] = mapped_column(String(32))
     orcid: Mapped[Optional[str]] = mapped_column(String(64))
-    author_order: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # ---------- Audit ----------
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)

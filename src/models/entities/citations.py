@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -50,7 +50,7 @@ class Reference(Base):
     issn: Mapped[Optional[str]] = mapped_column(String(32))
     essn: Mapped[Optional[str]] = mapped_column(String(32))
     cited_order: Mapped[int] = mapped_column(Integer)
-    match: Mapped[bool] = mapped_column(Boolean)
+    match: Mapped[str] = mapped_column(String(8))
 
     # ---------- Audit ----------
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)

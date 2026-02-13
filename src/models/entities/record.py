@@ -4,40 +4,41 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
+from src.models.entities.pmc_article import PMCArticle
+from src.models.entities.extras import Grant
+from .base import Base
+
 from sqlalchemy import String, Integer, TIMESTAMP, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 
-class Base(DeclarativeBase):
-    pass
-
 
 class RecordType(str, Enum):
-    ARTICLE = "Article"
-    GRANT = "Grant"
-    REPO = "Repo"
-    LIBRARY = "Library"
+    Article = "Article"
+    Grant = "Grant"
+    Repo = "Repo"
+    Library = "Library"
 
 
 class Source(str, Enum):
-    PUBMED = "PubMed"
-    EUROPE_PMC = "Europe PMC"
-    GITHUB = "Github"
+    PubMed = "PubMed"
+    Europe_PMC = "Europe_PMC"
+    Github = "Github"
     PYPI = "Pypi"
 
 
 class Status(str, Enum):
-    PENDING = "Pending"
-    APPROVED = "Approved"
-    REJECTED = "Rejected"
+    Pending = "Pending"
+    Approved = "Approved"
+    Rejected = "Rejected"
 
 
 class ProductType(str, Enum):
-    STANDARD = "standard"
-    IMPLEMENTATION = "implementation"
-    REFERENCE = "reference"
+    standard = "standard"
+    implementation = "implementation"
+    reference = "reference"
 
 
 class Record(Base):
@@ -47,7 +48,7 @@ class Record(Base):
     - Uses PostgreSQL ARRAY(TEXT) for 'keyword' list.
     - Adds server-side defaults for created_at/updated_at via func.now().
     """
-    __tablename__ = "record" 
+    __tablename__ = "records" 
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
@@ -58,7 +59,7 @@ class Record(Base):
         SAEnum(Source, native_enum=False), nullable=False
     )
     status: Mapped[Status] = mapped_column(
-        SAEnum(Status, native_enum=False), nullable=False, default=Status.PENDING
+        SAEnum(Status, native_enum=False), nullable=False, default=Status.Pending
     )
 
 
@@ -83,3 +84,13 @@ class Record(Base):
     deleted_by: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    # ---------- Relationships ----------
+
+    article: Mapped[List["PMCArticle"]] = relationship(
+        cascade="all, delete-orphan",
+    )
+
+    grant: Mapped[List["Grant"]] = relationship(
+        cascade="all, delete-orphan",
+    )

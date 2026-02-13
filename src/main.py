@@ -50,6 +50,7 @@ from contextlib import asynccontextmanager
 from src.repositories.epmc import EPMCRepo
 from src.services.epmc import EPMCService
 from src.clients.epmc import EPMCClient
+from src.services.grant import Grant
 
 
 def main() -> FastAPI:
@@ -126,7 +127,9 @@ def main() -> FastAPI:
     epmc_service = EPMCService(epmc_repo)
     epmc_router = EPMCRouter(epmc_service)
     app.include_router(epmc_router.router)
-
+    # move after ingestion success
+    grant_service = Grant(epmc_repo)
+    grant_service.create_grants("ga4gh")
     epmc_service.insert_articles_by_keyword("ga4gh", created_by="system", epmc_db=session)
 
     return app

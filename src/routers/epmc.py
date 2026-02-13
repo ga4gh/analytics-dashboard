@@ -22,6 +22,12 @@ class EPMC:
             service = EPMCService(repo)
             return service.get_all_articles()
 
+        @self.router.get("/epmc/all-authors", response_model=list[PMCArticleFull])
+        async def get_all_articles(db: Session = Depends(get_session)):
+            repo = EPMCRepo(db)
+            service = EPMCService(repo)
+            return service.get_all_articles()
+
         @self.router.post("/epmc/ingest-pmc-data", response_model=list[PMCArticleFull])
         async def ingest_pmc_data(
             keyword: str = Body(..., embed=True),  

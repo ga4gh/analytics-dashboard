@@ -5,6 +5,7 @@ from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
 from src.models.entities.extras import FullText, Grant
 from src.models.entities.citations import Citation, Reference
+from src.models.entities.record import Record, RecordType, Source, Status, ProductType
 
 import requests
 import pandas as pd
@@ -19,14 +20,14 @@ class EPMCClient:
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
-    def create_article(self, article_data, id, created_by: str = "system") -> PMCArticle:
+    def create_article(self, article_data, record_id, created_by: str = "system") -> PMCArticle:
         return PMCArticle(
             id=None,  
-            record_id=id,  
+            record_id=record_id,  
             source=article_data.get("source", ""),
             pm_id=article_data.get("id"),
             pmc_id=article_data.get("pmcid", "") or "",
-            full_text_id="",
+            full_text_id=((article_data.get("fullTextIdList") or {}).get("fullTextId") or ""),
             doi=article_data.get("doi", "") or "",
             title=article_data.get("title", "") or "",
             pub_year=int(article_data.get("pubYear") or 0),
@@ -35,14 +36,14 @@ class EPMCClient:
             publication_status=article_data.get("publicationStatus", "") or "",
             language=article_data.get("language", "") or "",
             pub_type=((article_data.get("pubTypeList") or {}).get("pubType") or None),
-            is_open_access=bool(article_data.get("isOpenAccess")),
-            inepmc=bool(article_data.get("inEPMC")),  
-            inpmc=bool(article_data.get("inPMC")),    
-            has_pdf=bool(article_data.get("hasPDF")),
-            has_book=bool(article_data.get("hasBook")),
-            has_suppl=bool(article_data.get("hasSuppl")),
+            is_open_access=article_data.get("isOpenAccess"),
+            inepmc=article_data.get("inEPMC"),  
+            inpmc=article_data.get("inPMC"),    
+            has_pdf=article_data.get("hasPDF"),
+            has_book=article_data.get("hasBook"),
+            has_suppl=article_data.get("hasSuppl"),
             cited_by_count=int(article_data.get("citedByCount") or 0),
-            has_references=bool(article_data.get("hasReferences")),
+            has_references=article_data.get("hasReferences"),
             date_of_creation=_parse_dt(article_data.get("dateOfCreation")),
             first_index_date=_parse_dt(article_data.get("firstIndexDate")),
             fulltext_receive_date=_parse_dt(article_data.get("fullTextReceivedDate")),
@@ -67,7 +68,6 @@ class EPMCClient:
             lastname=author_data.get("lastName"),
             initials=author_data.get("initials"),
             orcid=(author_data.get("authorId") or {}).get("value"),
-            author_order=author_order,
             created_by=created_by,
             created_at=datetime.utcnow(),
             updated_by=created_by,
@@ -134,6 +134,7 @@ class EPMCClient:
             funder_name=None,
             doi=None,
             title=None,
+            abstract=None,
             start_date=_parse_dt(article_data.get("startDate")),
             end_date=_parse_dt(article_data.get("endDate")),
             institution_name=None,
@@ -146,7 +147,7 @@ class EPMCClient:
             version=1,
         )
 
-    def create_citation(self, cite, article_id: int, count: int, created_by: str = "system") -> Citation:
+    def create_citation(self, cite, article_id: int, created_by: str = "system") -> Citation:
 
         return Citation(
             id=None,
@@ -155,9 +156,9 @@ class EPMCClient:
             source=cite.get("source"),
             citation_type=cite.get("citationType") or cite.get("citation_type"),
             title=cite.get("title"),
-            authors=cite.get("authors"),
+            authors=cite.get("authorString"),
             pub_year=int(cite.get("pubYear") or cite.get("pub_year") or 0),
-            citation_count=int(count),
+            citation_count=cite.get("citedByCount"),
             created_by=created_by,
             created_at=datetime.utcnow(),
             updated_by=created_by,
@@ -175,12 +176,12 @@ class EPMCClient:
             source=ref.get("source"),
             citation_type=ref.get("citationType") or ref.get("citation_type"),
             title=ref.get("title"),
-            authors=ref.get("authors"),
+            authors=ref.get("authorString"),
             pub_year=int(ref.get("pubYear") or ref.get("pub_year") or 0),
             issn=ref.get("ISSN") or ref.get("issn"),
             essn=ref.get("ESSN") or ref.get("essn"),
             cited_order=int(ref.get("citedOrder") or ref.get("cited_order") or 0),
-            match=bool(ref.get("match")) if ref.get("match") is not None else False,
+            match=ref.get("match") if ref.get("match") is not None else False,
             created_by=created_by,
             created_at=datetime.utcnow(),
             updated_by=created_by,
@@ -213,10 +214,13 @@ class EPMCClient:
             agency=funder.get("Name"),
             family_name=person.get("FamilyName"),
             given_name=person.get("GivenName"),
+            alias=person_aliases,
+            initials=person.get("Initials"),
             orcid=orcid or None,
             funder_name=funder.get("Name"),
             doi=grant_info.get("Doi"),
             title=grant_info.get("Title"),
+            abstract=grant_info.get("Abstract"),
             start_date=_parse_dt(grant_info.get("StartDate")),
             end_date=_parse_dt(grant_info.get("EndDate")),
             institution_name=institution.get("Name"),
@@ -244,6 +248,19 @@ class EPMCClient:
             updated_at=datetime.utcnow(),
             deleted_by=None,
             deleted_at=None,
+            version=1,
+        )
+
+    def create_record(self, type: str, keyword: str) -> Record:
+        return Record(
+            id=None,  
+            record_type= RecordType.Article if type == "ARTICLE" else RecordType.Grant,
+            source=Source.Europe_PMC,
+            status=Status.Approved,
+            keyword=[keyword],
+            product_line=ProductType.implementation,
+            created_by="system",
+            updated_by="system",
             version=1,
         )
 

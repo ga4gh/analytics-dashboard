@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional, Any
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -31,7 +31,7 @@ class Grant(Base):
     # ---------- PK / FK ----------
     id: Mapped[int] = mapped_column(primary_key=True)
     record_id: Mapped[int] = mapped_column(
-        ForeignKey("record.id", ondelete="CASCADE"),
+        ForeignKey("records.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -42,12 +42,13 @@ class Grant(Base):
     family_name: Mapped[Optional[str]] = mapped_column(Text)
     given_name: Mapped[Optional[str]] = mapped_column(Text)
     initials: Mapped[Optional[str]] = mapped_column(Text)
-    alias: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String))
+    alias: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSONB)
     orcid: Mapped[Optional[str]] = mapped_column(Text)
 
     funder_name: Mapped[Optional[str]] = mapped_column(Text)
     doi: Mapped[Optional[str]] = mapped_column(Text)
     title: Mapped[Optional[str]] = mapped_column(Text)
+    abstract: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSONB)
 
     start_date: Mapped[Optional[datetime]] = mapped_column(
         TIMESTAMP(timezone=True)

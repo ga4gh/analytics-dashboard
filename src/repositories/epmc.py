@@ -20,7 +20,7 @@ class EPMCRepo:
     '''
     
     def __init__(self, db: Session):
-        # CHANGE: Keep a single repo instance; pass entity_cls per method call for reusability.
+        
         self.db = db
     
     def insert(self, entity: Any, entity_cls: Type[PMCArticle] = PMCArticle) -> int:
@@ -56,18 +56,12 @@ class EPMCRepo:
             .first()
         )
 
-    def get_by_author_name(
-        self,
-        fullname: str,
-        firstname: str,
-        lastname: str,
-        entity_cls: Type[PMCArticle] = PMCArticle,
-    ):
-        # CHANGE: Use entity_cls.id in joins (avoid hard-coding PMCArticle.id) for reusability.
+    def get_by_author_name(self, fullname: str, firstname: str, lastname: str) -> PMCAuthor | None:
         return (
-            self.db.query(entity_cls)
-            .join(ArticleAuthor, ArticleAuthor.article_id == entity_cls.id)
-            .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
+            self.db.query(PMCAuthor)
+            .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
+            # Optional: require association to an article (but DON'T join PMCAuthor again)
+            .join(PMCArticle, PMCArticle.id == ArticleAuthor.article_id)
             .filter(
                 PMCAuthor.fullname == fullname,
                 PMCAuthor.firstname == firstname,
@@ -126,7 +120,31 @@ class EPMCRepo:
             )
             .all()
         )
-        
+
+    def insert_or_update(self, entity, type, update: bool):
+        if update:
+            entity_id = self.update(entity, type)
+        else:
+            entity_id = self.insert(entity, type)
+        return entity_id
+
+    def get_all_articles(self) -> list[PMCArticle]:
+        """
+        Fetch all articles with all child relationships loaded.
+        """
+        return (
+            self.db.query(PMCArticle)
+            .options(
+                selectinload(PMCArticle.article_authors),
+                selectinload(PMCArticle.affiliations),
+                selectinload(PMCArticle.keywords),
+                selectinload(PMCArticle.grants),
+                selectinload(PMCArticle.fulltexts),
+                selectinload(PMCArticle.citations),
+                selectinload(PMCArticle.references),
+            )
+            .all()
+        )      
 
 def get_all_articles_old(self) -> list[PMCArticle]:
     query = """
@@ -261,20 +279,3 @@ def get_all_articles_old(self) -> list[PMCArticle]:
 
     return [PMCArticle.model_validate(row[0]) for row in rows]
 
-def get_all_articles(self) -> list[PMCArticle]:
-        """
-        Fetch all articles with all child relationships loaded.
-        """
-        return (
-            self.db.query(PMCArticle)
-            .options(
-                selectinload(PMCArticle.article_authors),
-                selectinload(PMCArticle.affiliations),
-                selectinload(PMCArticle.keywords),
-                selectinload(PMCArticle.grants),
-                selectinload(PMCArticle.fulltexts),
-                selectinload(PMCArticle.citations),
-                selectinload(PMCArticle.references),
-            )
-            .all()
-        )

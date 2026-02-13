@@ -4,7 +4,8 @@ from typing import List, Optional
 from src.models.entities.citations import Citation, Reference
 from src.models.entities.extras import FullText, Grant, Keyword
 from src.models.entities.pmc_author import PMCAffiliation, PMCAuthor, ArticleAuthor
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -35,18 +36,18 @@ class PMCArticle(Base):
     affiliation: Mapped[str] = mapped_column(Text, nullable=False)
     publication_status: Mapped[str] = mapped_column(String(64), nullable=False)
     language: Mapped[str] = mapped_column(String(32), nullable=False)
-    pub_type: Mapped[Optional[str]] = mapped_column(String(64))
+    pub_type: Mapped[Optional[List[str]]] = mapped_column(JSONB)
 
     # ---------- Flags ----------
-    is_open_access: Mapped[bool] = mapped_column(Boolean, default=False)
-    inepmc: Mapped[bool] = mapped_column(Boolean, default=False)
-    inpmc: Mapped[bool] = mapped_column(Boolean, default=False)
-    has_pdf: Mapped[bool] = mapped_column(Boolean, default=False)
-    has_book: Mapped[bool] = mapped_column(Boolean, default=False)
-    has_suppl: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_open_access: Mapped[str] = mapped_column(String(8), default=False)
+    inepmc: Mapped[str] = mapped_column(String(8), default=False)
+    inpmc: Mapped[str] = mapped_column(String(8), default=False)
+    has_pdf: Mapped[str] = mapped_column(String(8), default=False)
+    has_book: Mapped[str] = mapped_column(String(8), default=False)
+    has_suppl: Mapped[str] = mapped_column(String(8), default=False)
 
     cited_by_count: Mapped[int] = mapped_column(Integer, default=0)
-    has_references: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_references: Mapped[str] = mapped_column(String(8), default=False)
 
     # ---------- Dates ----------
     date_of_creation: Mapped[datetime] = mapped_column(
@@ -107,10 +108,6 @@ class PMCArticle(Base):
         cascade="all, delete-orphan"
     )
 
-    grants: Mapped[List["Grant"]] = relationship(
-        cascade="all, delete-orphan"
-    )
-
     fulltexts: Mapped[List["FullText"]] = relationship(
         cascade="all, delete-orphan"
     )
@@ -146,8 +143,3 @@ class PMCArticleFull(PMCArticle):
         viewonly=True,
     )
 
-    grants: Mapped[List["Grant"]] = relationship(
-        "Grant",
-        primaryjoin="PMCArticle.record_id == Grant.record_id",
-        viewonly=True,
-    )
