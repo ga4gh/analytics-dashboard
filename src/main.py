@@ -61,7 +61,7 @@ def main() -> FastAPI:
     engine = create_engine(config.database_url, pool_pre_ping=True, future=True)  
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)   
     session: Session = SessionLocal()                                             
-    logger.info("Database connected via SQLAlchemy ORM")                          
+    logger.info("Database connected via SQLAlchemy ORM")
 
     '''   
     record_fields = set(Record.model_fields.keys())

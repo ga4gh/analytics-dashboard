@@ -87,7 +87,9 @@ class Record(Base):
 
     # ---------- Relationships ----------
 
-    article: Mapped[List["PMCArticle"]] = relationship(
+    article: Mapped["PMCArticle"] = relationship(
+        back_populates="record",
+        uselist=False,
         cascade="all, delete-orphan",
     )
 

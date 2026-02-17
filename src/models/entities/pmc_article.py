@@ -4,9 +4,11 @@ from typing import List, Optional
 from src.models.entities.citations import Citation, Reference
 from src.models.entities.extras import FullText, Grant, Keyword
 from src.models.entities.pmc_author import PMCAffiliation, PMCAuthor, ArticleAuthor
-from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.models.entities.record import Record
 
 from .base import Base
 from .pmc_author import PMCAffiliation, ArticleAuthor
@@ -22,10 +24,11 @@ class PMCArticle(Base):
         ForeignKey("records.id", ondelete="CASCADE"),
         nullable=False,
     )
+    record: Mapped["Record"] = relationship(back_populates="article")
 
     # ---------- Core fields ----------
     source: Mapped[str] = mapped_column(String(64), nullable=False)
-    pm_id: Mapped[Optional[str]] = mapped_column(String(64))
+    pm_id: Mapped[str] = mapped_column(String(64), nullable=False)
     pmc_id: Mapped[str] = mapped_column(String(64), nullable=False)
     full_text_id: Mapped[str] = mapped_column(String(128), nullable=False)
     doi: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -118,6 +121,10 @@ class PMCArticle(Base):
 
     references: Mapped[List["Reference"]] = relationship(
         cascade="all, delete-orphan"
+    )
+    
+    __table_args__ = (
+        UniqueConstraint("pm_id", name="uq_pmc_articles_pm_id"),
     )
 
 class PMCArticleFull(PMCArticle):
