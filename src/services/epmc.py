@@ -1,4 +1,5 @@
 from typing import List
+from unittest import skip
 
 from src.clients.epmc import EPMCClient
 
@@ -36,9 +37,7 @@ class EPMCService:
 
         for article in results:
 
-            existing = self.epmc_repo.get_by_source_id(article.get("id"))
-            is_update = existing is not None  # CHANGE: if existing found, we update
-            #is_update = False
+            is_update = self.epmc_repo.get_by_source_id(article.get("id")) is not None
 
             # Record
             article_record_model = epmc.create_record("ARTICLE", keyword)
@@ -51,17 +50,20 @@ class EPMCService:
 
             # Grants 
             for grant_data in (article.get("grantsList") or {}).get("grant") or []:
-                # use article record id for grants associated with article                
+                # use article record id for grants associated with article
+                existing_grant = self.epmc_repo.get_grant(article_record_id, grant_data.get("grant_id"), grant_data.get("agency"), grant_data.get("doi")) is not None               
+                
                 grant_entity = epmc.create_grant(grant_data, article_record_id, created_by=created_by)
-                grant_id = self.epmc_repo.insert_or_update(grant_entity, Grant, is_update)
+                grant_id = self.epmc_repo.insert_or_update(grant_entity, Grant, existing_grant)
                 counts["grants"] += 1
 
             # Citations
-
             citation_data = epmc.get_citations(article.get("id"))
             for cite in (citation_data.get("citationList") or {}).get("citation") or []:
+                existing_citation = self.epmc_repo.get_citation(article_id, cite.get("citation_id")) is not None
+
                 citation_entity = epmc.create_citation(cite, article_id, created_by=created_by)
-                citation_id = self.epmc_repo.insert_or_update(citation_entity, Citation, is_update)
+                citation_id = self.epmc_repo.insert_or_update(citation_entity, Citation, existing_citation)
                 counts["citations"] += 1
 
             # References
@@ -72,14 +74,17 @@ class EPMCService:
                 reference_items = [reference_items]
 
             for ref in reference_items:
+                existing_reference = self.epmc_repo.get_reference(article_id, ref.get("reference_id")) is not None
+
                 reference_entity = epmc.create_reference(ref, article_id, created_by=created_by)
-                reference_id = self.epmc_repo.insert_or_update(reference_entity, Reference, is_update)
+                reference_id = self.epmc_repo.insert_or_update(reference_entity, Reference, existing_reference)
                 counts["references"] += 1
 
             # Fulltext
             for ft in (article.get("fullTextUrlList") or {}).get("fullTextUrl") or []:
+                existing_fulltext = self.epmc_repo.get_fulltext(article_id, ft.get("url")) is not None
                 fulltext_entity = epmc.create_fulltext(article_id, ft, created_by=created_by)
-                fulltext_id = self.epmc_repo.insert_or_update(fulltext_entity, FullText, is_update)
+                fulltext_id = self.epmc_repo.insert_or_update(fulltext_entity, FullText, existing_fulltext)
                 counts["fulltexts"] += 1
             
             author_order = 1
@@ -94,8 +99,9 @@ class EPMCService:
                     author_id = existing.id
 
                 # Article_authors
+                existing_article_author = self.epmc_repo.get_articles_authors(article_id, author_id) is not None
                 article_author_entity = epmc.create_article_author(article_id, author_id, author_order, created_by=created_by)
-                article_author_id = self.epmc_repo.insert_or_update(article_author_entity, ArticleAuthor, is_update)
+                article_author_id = self.epmc_repo.insert_or_update(article_author_entity, ArticleAuthor, existing_article_author)
                 counts["article_authors"] += 1
 
                 author_order += 1
@@ -105,8 +111,9 @@ class EPMCService:
                 for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
                     org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
                     if org_name and org_name not in affiliations_seen:
+                        existing_affiliation = self.epmc_repo.get_affiliation(article_id, aff.get("reference_id")) is not None
                         affiliation_entity = epmc.create_affiliation(aff, author_id, article_id, aff_order, created_by=created_by)
-                        affiliation_id = self.epmc_repo.insert_or_update(affiliation_entity, PMCAffiliation, is_update)
+                        affiliation_id = self.epmc_repo.insert_or_update(affiliation_entity, PMCAffiliation, existing_affiliation)
                         counts["affiliations"] += 1
                         affiliations_seen.add(org_name)
                         aff_order += 1

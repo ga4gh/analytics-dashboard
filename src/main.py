@@ -131,7 +131,7 @@ def main() -> FastAPI:
     grant_service = Grant(epmc_repo)
     grant_service.create_grants("ga4gh")
     epmc_service.insert_articles_by_keyword("ga4gh", created_by="system", epmc_db=session)
-
+    print("done data ingestion")
     return app
 
 

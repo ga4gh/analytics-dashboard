@@ -1,16 +1,20 @@
 from datetime import datetime
+import time
 from typing import Any, Optional, Type, List
 
-from src.models.entities.pmc_article import PMCArticle
+from src.models.entities.pmc_article import PMCArticle, PMCAffiliation
 
 import json
 
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import OperationalError
 
 # Reusable ORM entities for cross-table queries
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
-from src.models.entities.extras import Keyword
+from src.models.entities.extras import FullText, Keyword, Grant
 from src.models.entities.citations import Citation, Reference
+# from src.models.grant import Grant
+# from src.models.pmc_article import PMCArticle, PMCAffiliation
 
 
 class EPMCRepo:
@@ -70,6 +74,68 @@ class EPMCRepo:
             .first()
         )
 
+    def get_grant(self, record_id: int, grant_id: Optional[str], agency: Optional[str], doi: Optional[str]) -> Grant | None:
+
+        return (
+            self.db.query(Grant)
+            .filter(
+                Grant.record_id == record_id,
+                (Grant.grant_id == grant_id) if grant_id is not None else Grant.grant_id.is_(None),
+                (Grant.agency == agency) if agency is not None else Grant.agency.is_(None),
+                (Grant.doi == doi) if doi is not None else Grant.doi.is_(None),
+            )
+            .first()
+        )
+
+    def get_citation(self, article_id: int, citation_id: str) -> Citation | None:
+        return (
+            self.db.query(Citation)
+            .filter(
+                Citation.article_id == article_id,
+                Citation.citation_id == citation_id,
+            )
+            .first()
+        )
+    def get_fulltext(self, article_id: int, url: str) -> FullText | None:
+        return (
+            self.db.query(FullText)
+            .filter(
+                FullText.article_id == article_id,
+                FullText.url == url,
+            )
+            .first()
+        )
+
+    def get_articles_authors(self, article_id: int, author_id: int) -> ArticleAuthor | None:
+        return (
+            self.db.query(ArticleAuthor)
+            .filter(
+                ArticleAuthor.article_id == article_id,
+                ArticleAuthor.author_id == author_id,
+            )
+            .first()
+        )
+
+    def get_reference(self, article_id: int, reference_id: str) -> Reference | None:
+        return (
+            self.db.query(Reference)
+            .filter(
+                Reference.article_id == article_id,
+                Reference.reference_id == reference_id,
+            )
+            .first()
+        )
+    
+    def get_affiliation(self, article_id: int, reference_id: str) -> PMCAffiliation | None:
+        return (
+            self.db.query(Reference)
+            .filter(
+                Reference.article_id == article_id,
+                Reference.reference_id == reference_id,
+            )
+            .first()
+        )
+
     def get_by_keyword(self, keyword: str, entity_cls: Type[PMCArticle] = PMCArticle) -> list:
         # CHANGE: Keyword.value is a PostgreSQL ARRAY(String); use .any(keyword) to emulate '= ANY(array)'.
         return (
@@ -122,11 +188,19 @@ class EPMCRepo:
         )
 
     def insert_or_update(self, entity, type, update: bool):
-        if update:
-            entity_id = self.update(entity, type)
-        else:
-            entity_id = self.insert(entity, type)
-        return entity_id
+        while True:
+            try:
+                if update:
+                    entity_id = self.update(entity, type)
+                else:
+                    entity_id = self.insert(entity, type)
+                return entity_id  
+            except OperationalError as e:
+                print(f"ConnectionError: {e}. Retrying after a timeout...")
+                time.sleep(5)  
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                raise  
 
     def get_all_articles(self) -> list[PMCArticle]:
         """
