@@ -25,12 +25,18 @@ class Grant():
         if isinstance(record_list, dict):
             record_list = [record_list]
 
-        for gr in record_list:
-            #is_update = self.epmc_repo.get_by_source_id(gr.get("id"), Grant_Model) is not None
-            is_update = False
+        try:
+            for gr in record_list:
+                #is_update = self.epmc_repo.get_by_source_id(gr.get("id"), Grant_Model) is not None
+                is_update = False
 
-            grant_record_model = client.create_record("GRANT", keyword)
-            grant_record_id = self.epmc_repo.insert_or_update(grant_record_model, Record, is_update)
+                grant_record_model = client.create_record("GRANT", keyword)
+                grant_record_id = self.epmc_repo.insert_or_update(grant_record_model, Record, is_update)
 
-            grant_api_entity = client.create_grant_api(gr, grant_record_id)
-            self.epmc_repo.insert_or_update(grant_api_entity, Grant_Model, is_update)
+                grant_api_entity = client.create_grant_api(gr, grant_record_id)
+                self.epmc_repo.insert_or_update(grant_api_entity, Grant_Model, is_update)
+
+            self.epmc_repo.commit_to_db()
+        except Exception:
+            self.epmc_repo.rollback()
+            raise

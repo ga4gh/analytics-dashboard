@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
 from src.models.entities.extras import FullText, Keyword, Grant
 from src.models.entities.citations import Citation, Reference
+from src.models.entities.record import Record
 # from src.models.grant import Grant
 # from src.models.pmc_article import PMCArticle, PMCAffiliation
 
@@ -33,17 +34,22 @@ class EPMCRepo:
         if not isinstance(entity, entity_cls):
             raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
         self.db.add(entity)
-        self.db.commit()
-        self.db.refresh(entity)
+        self.db.flush()
         return entity.id
 
     def update(self, entity: Any, entity_cls: Type[PMCArticle] = PMCArticle) -> Optional[int]:
-        # CHANGE: ORM-only update. Merge the given entity and commit.
+        # CHANGE: ORM-only update. Merge the given entity and flush.
         if not isinstance(entity, entity_cls):
             raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
         merged = self.db.merge(entity)
-        self.db.commit()
+        self.db.flush()
         return getattr(merged, "id", None)
+
+    def commit_to_db(self) -> None:
+        self.db.commit()
+
+    def rollback(self) -> None:
+        self.db.rollback()
 
     def get_by_id(self, entity_id: int, entity_cls: Type[PMCArticle] = PMCArticle):
         # CHANGE: Return ORM entity (no Pydantic validation).
@@ -145,6 +151,14 @@ class EPMCRepo:
             .all()
         )
 
+    def get_articles_by_keyword(self, keyword: str) -> list[PMCArticle]:
+        return (
+            self.db.query(PMCArticle)
+            .join(Record, PMCArticle.record_id == Record.id)
+            .filter(Record.keyword.any(keyword))
+            .all()
+        )
+
     def get_by_keyword_and_date(
         self,
         keyword: str,
@@ -191,15 +205,20 @@ class EPMCRepo:
         while True:
             try:
                 if update:
-                    entity_id = self.update(entity, type)
+                    # entity_id = self.update(entity, type)
+                    print("inserted :)")
                 else:
-                    entity_id = self.insert(entity, type)
-                return entity_id  
+                    # entity_id = self.insert(entity, type)
+                    print("updated :)")
+                #return entity_id
+                return 1   
             except OperationalError as e:
                 print(f"ConnectionError: {e}. Retrying after a timeout...")
+                self.db.rollback()
                 time.sleep(5)  
             except Exception as e:
                 print(f"Unexpected error: {e}")
+                self.db.rollback()
                 raise  
 
     def get_all_articles(self) -> list[PMCArticle]:
@@ -219,6 +238,50 @@ class EPMCRepo:
             )
             .all()
         )      
+
+    def get_all_grants(self) -> list[Grant]:
+        return self.db.query(Grant).all()
+
+    def get_all_pmc_authors(self) -> list[PMCAuthor]:
+        return self.db.query(PMCAuthor).all()
+
+    def get_authors_by_article_id(self, article_id: int) -> list[PMCAuthor]:
+        return (
+            self.db.query(PMCAuthor)
+            .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
+            .filter(ArticleAuthor.article_id == article_id)
+            .order_by(ArticleAuthor.author_order.asc().nullslast())
+            .all()
+        )
+
+    def get_articles_by_author_id(self, author_id: int) -> list[PMCArticle]:
+        return (
+            self.db.query(PMCArticle)
+            .join(ArticleAuthor, ArticleAuthor.article_id == PMCArticle.id)
+            .filter(ArticleAuthor.author_id == author_id)
+            .all()
+        )
+
+    def get_all_article_authors(self) -> list[ArticleAuthor]:
+        return self.db.query(ArticleAuthor).all()
+
+    def get_all_pmc_references(self) -> list[Reference]:
+        return self.db.query(Reference).all()
+
+    def get_all_citations(self) -> list[Citation]:
+        return self.db.query(Citation).all()
+
+    def get_all_fulltexts(self) -> list[FullText]:
+        return self.db.query(FullText).all()
+
+    def get_all_pmc_affiliations(self) -> list[PMCAffiliation]:
+        return self.db.query(PMCAffiliation).all()
+
+    def get_all_articles_ids(self) -> list[tuple[str | None, int]]:
+        return (
+            self.db.query(PMCArticle.pm_id, PMCArticle.record_id)
+            .all()
+        )
 
 def get_all_articles_old(self) -> list[PMCArticle]:
     query = """
