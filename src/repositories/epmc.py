@@ -8,12 +8,14 @@ import json
 
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import func
 
 # Reusable ORM entities for cross-table queries
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
 from src.models.entities.extras import FullText, Keyword, Grant
 from src.models.entities.citations import Citation, Reference
 from src.models.entities.record import Record
+from src.models.entities.ingestion import Ingestion
 # from src.models.grant import Grant
 # from src.models.pmc_article import PMCArticle, PMCAffiliation
 
@@ -206,12 +208,11 @@ class EPMCRepo:
             try:
                 if update:
                     # entity_id = self.update(entity, type)
-                    print("inserted :)")
+                    entity_id = self.insert(entity, type)
                 else:
-                    # entity_id = self.insert(entity, type)
-                    print("updated :)")
-                #return entity_id
-                return 1   
+                    entity_id = self.insert(entity, type)
+                return entity_id
+                #return 1   
             except OperationalError as e:
                 print(f"ConnectionError: {e}. Retrying after a timeout...")
                 self.db.rollback()
@@ -282,6 +283,119 @@ class EPMCRepo:
             self.db.query(PMCArticle.pm_id, PMCArticle.record_id)
             .all()
         )
+
+    def get_max_version_by_source_id(self) -> dict[str, int]:
+        """
+        Returns a dict mapping a descriptive source-id key for every ePMC entity row
+        to the highest ingestion.version value linked to that row via ingestion_id.
+
+                Key format: "<table_label>:<source_identifier>"
+                    articles       -> "article:<pm_id>"
+                    authors        -> "author:<id>"
+                    article_authors-> "article_author:<pm_id>:<author_id>"
+                    affiliations   -> "affiliation:<pm_id>:<author_id>"
+                    grants         -> "grant:<grant_id>"
+                    fulltexts      -> "fulltext:<url>"
+                    citations      -> "citation:<citation_id>"
+                    references     -> "reference:<reference_id>"
+        """
+        result: dict[str, int] = {}
+
+        # pmc_articles  ->  key: "article:<pm_id>"
+        for pm_id, max_ver in (
+            self.db.query(PMCArticle.pm_id, func.max(Ingestion.version))
+            .join(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .filter(PMCArticle.ingestion_id.isnot(None))
+            .group_by(PMCArticle.pm_id)
+            .all()
+        ):
+            result[f"article:{pm_id}"] = max_ver
+
+        # pmc_authors  ->  key: "author:<id>"
+        for author_id, max_ver in (
+            self.db.query(PMCAuthor.id, func.max(Ingestion.version))
+            .join(Ingestion, PMCAuthor.ingestion_id == Ingestion.id)
+            .filter(PMCAuthor.ingestion_id.isnot(None))
+            .group_by(PMCAuthor.id)
+            .all()
+        ):
+            result[f"author:{author_id}"] = max_ver
+
+        # articles_authors  ->  key: "article_author:<pm_id>:<author_id>"
+        for pm_id, author_id, max_ver in (
+            self.db.query(PMCArticle.pm_id, ArticleAuthor.author_id, func.max(Ingestion.version))
+            .join(ArticleAuthor, ArticleAuthor.article_id == PMCArticle.id)
+            .join(Ingestion, ArticleAuthor.ingestion_id == Ingestion.id)
+            .filter(ArticleAuthor.ingestion_id.isnot(None))
+            .group_by(PMCArticle.pm_id, ArticleAuthor.author_id)
+            .all()
+        ):
+            if pm_id is None:
+                continue
+            result[f"article_author:{pm_id}:{author_id}"] = max_ver
+
+        # pmc_affiliations  ->  key: "affiliation:<pm_id>:<author_id>"
+        for pm_id, author_id, max_ver in (
+            self.db.query(PMCArticle.pm_id, PMCAffiliation.author_id, func.max(Ingestion.version))
+            .join(PMCAffiliation, PMCAffiliation.article_id == PMCArticle.id)
+            .join(Ingestion, PMCAffiliation.ingestion_id == Ingestion.id)
+            .filter(PMCAffiliation.ingestion_id.isnot(None))
+            .group_by(PMCArticle.pm_id, PMCAffiliation.author_id)
+            .all()
+        ):
+            if pm_id is None:
+                continue
+            result[f"affiliation:{pm_id}:{author_id}"] = max_ver
+
+        # grants  ->  key: "grant:<grant_id>"
+        for grant_id, max_ver in (
+            self.db.query(Grant.grant_id, func.max(Ingestion.version))
+            .join(Ingestion, Grant.ingestion_id == Ingestion.id)
+            .filter(Grant.ingestion_id.isnot(None))
+            .group_by(Grant.grant_id)
+            .all()
+        ):
+            result[f"grant:{grant_id}"] = max_ver
+
+        # fulltexts  ->  key: "fulltext:<url>"
+        for url, max_ver in (
+            self.db.query(FullText.url, func.max(Ingestion.version))
+            .join(Ingestion, FullText.ingestion_id == Ingestion.id)
+            .filter(FullText.ingestion_id.isnot(None))
+            .group_by(FullText.url)
+            .all()
+        ):
+            if url is None:
+                continue
+            norm = str(url).strip().lower()
+            if norm.endswith("/"):
+                norm = norm.rstrip("/")
+            if not norm:
+                continue
+            result[f"fulltext:{norm}"] = max_ver
+
+        # citations  ->  key: "citation:<citation_id>"
+        for citation_id, max_ver in (
+            self.db.query(Citation.citation_id, func.max(Ingestion.version))
+            .join(Ingestion, Citation.ingestion_id == Ingestion.id)
+            .filter(Citation.ingestion_id.isnot(None))
+            .group_by(Citation.citation_id)
+            .all()
+        ):
+            result[f"citation:{citation_id}"] = max_ver
+
+        # pmc_references  ->  key: "reference:<reference_id>"
+        for reference_id, max_ver in (
+            self.db.query(Reference.reference_id, func.max(Ingestion.version))
+            .join(Ingestion, Reference.ingestion_id == Ingestion.id)
+            .filter(Reference.ingestion_id.isnot(None))
+            .group_by(Reference.reference_id)
+            .all()
+        ):
+            result[f"reference:{reference_id}"] = max_ver
+
+
+        return result
 
 def get_all_articles_old(self) -> list[PMCArticle]:
     query = """

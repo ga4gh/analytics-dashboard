@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS citations (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
+    ingestion_id INTEGER NOT NULL,
     citation_id VARCHAR(128),
     source VARCHAR(64),
     citation_type VARCHAR(64),

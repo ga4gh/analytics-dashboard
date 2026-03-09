@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS pmc_authors (
     id SERIAL PRIMARY KEY,
+    ingestion_id INTEGER NOT NULL,
     fullname TEXT NOT NULL,
     firstname VARCHAR(128),
     lastname VARCHAR(128),

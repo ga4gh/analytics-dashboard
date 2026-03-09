@@ -1,6 +1,7 @@
 # main.py
 # import imp
 import os
+import time
 import logging
 import uvicorn
 from fastapi import FastAPI
@@ -50,7 +51,7 @@ from contextlib import asynccontextmanager
 from src.repositories.epmc import EPMCRepo
 from src.services.epmc import EPMCService
 from src.clients.epmc import EPMCClient
-from src.services.grant import Grant
+from src.services.grant import GrantService as Grant
 
 
 def main() -> FastAPI:
@@ -129,9 +130,13 @@ def main() -> FastAPI:
     app.include_router(epmc_router.router)
     # move after ingestion success
     grant_service = Grant(epmc_repo)
-    grant_service.create_grants("ga4gh")
-    epmc_service.insert_articles_by_keyword("ga4gh", created_by="system", epmc_db=session)
-    print("done data ingestion")
+    #print(epmc_service.highest_versions_by_source_id)
+    #grant_service.create_grants("ga4gh")
+    start = time.perf_counter()
+    result = epmc_service.insert_articles_by_keyword("rews", created_by="system", epmc_db=session)
+    elapsed = time.perf_counter() - start
+    print(result)
+    print(f"done data ingestion (elapsed={elapsed:.3f}s)")
     return app
 
 

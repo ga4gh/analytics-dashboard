@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS articles_authors (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
     author_id INTEGER NOT NULL,
+    ingestion_id INTEGER NOT NULL,
     author_order INTEGER,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

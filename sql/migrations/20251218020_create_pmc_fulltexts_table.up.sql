@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS fulltexts (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
+    ingestion_id INTEGER NOT NULL,
     availability VARCHAR(64),
     availability_code VARCHAR(32),
     document_style VARCHAR(32),

@@ -19,6 +19,9 @@ class PMCAuthor(Base):
     lastname: Mapped[Optional[str]] = mapped_column(String(128))
     initials: Mapped[Optional[str]] = mapped_column(String(32))
     orcid: Mapped[Optional[str]] = mapped_column(String(64))
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Audit ----------
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -50,6 +53,9 @@ class PMCAffiliation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[int] = mapped_column(ForeignKey("pmc_authors.id", ondelete="CASCADE"), nullable=False)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Core fields ----------
     org_name: Mapped[Optional[str]] = mapped_column(Text)
@@ -72,6 +78,9 @@ class ArticleAuthor(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
     author_id: Mapped[int] = mapped_column(ForeignKey("pmc_authors.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Order ----------
     author_order: Mapped[Optional[int]] = mapped_column(Integer)

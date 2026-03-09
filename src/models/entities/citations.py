@@ -13,6 +13,9 @@ class Citation(Base):
     # ---------- PK / FK ----------
     id: Mapped[int] = mapped_column(primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Core fields ----------
     citation_id: Mapped[str] = mapped_column(String(128))
@@ -39,6 +42,9 @@ class Reference(Base):
     # ---------- PK / FK ----------
     id: Mapped[int] = mapped_column(primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Core fields ----------
     reference_id: Mapped[str] = mapped_column(String(128))
