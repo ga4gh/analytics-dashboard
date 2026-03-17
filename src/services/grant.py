@@ -2,6 +2,7 @@ from typing import List
 
 from src.clients.epmc import EPMCClient
 
+from src.models.entities.ingestion import Ingestion
 from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
 from src.models.entities.extras import Grant as Grant_Model, FullText, Keyword
@@ -18,6 +19,8 @@ class GrantService:
         self.epmc_client = EPMCClient()
         self.grants_records: dict[str, int] = self._load_grants_records()
         self.highest_versions_by_source_id: dict[str, int] = self._load_versions_by_source_id()
+        self.highest_ingestion_version = repo.get_highest_ingestion_version()
+        self.ingestion_id = None
 
     def _load_grants_records(self) -> dict[str, int]:
         """Return a mapping of grant source identifier -> record_id.
@@ -43,8 +46,15 @@ class GrantService:
 
     def create_grants(self, keyword):
         # grants api
+
+        counts = {"grants": 0}
         grant_response = self.epmc_client.get_grants(keyword)
         record_list = (grant_response.get("RecordList") or {}).get("Record") or []
+
+        ingestion_version = self.highest_ingestion_version + 1
+        ingestion_model = self.epmc_client.create_ingestion(ingestion_version, "system")
+        ingestion_id = self.epmc_repo.insert_or_update(ingestion_model, Ingestion, False)
+        self.ingestion_id = ingestion_id
 
         if isinstance(record_list, dict):
             record_list = [record_list]
@@ -57,10 +67,12 @@ class GrantService:
                 grant_record_model = self.epmc_client.create_record("GRANT", keyword)
                 grant_record_id = self.epmc_repo.insert_or_update(grant_record_model, Record, is_update)
 
-                grant_api_entity = self.epmc_client.create_grant_api(gr, grant_record_id)
+                grant_api_entity = self.epmc_client.create_grant_api(gr, grant_record_id, ingestion_id)
                 self.epmc_repo.insert_or_update(grant_api_entity, Grant_Model, is_update)
+                counts["grants"] += 1
 
             self.epmc_repo.commit_to_db()
         except Exception:
             self.epmc_repo.rollback()
             raise
+        return counts

@@ -58,7 +58,8 @@ def main() -> FastAPI:
     app = FastAPI()
 
     # DB setup
-
+    db_conn = setup.DatabaseConnection(config.database_url)
+    db_conn.connect()
     engine = create_engine(config.database_url, pool_pre_ping=True, future=True)  
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)   
     session: Session = SessionLocal()                                             
@@ -97,17 +98,18 @@ def main() -> FastAPI:
     gh_repo = GithubRepoRepository(db_conn, gh_repo_sql_builder)
     gh_service = GithubReposService(gh_repo, gh_client, record_repo)
     gh_router = GithubRepoRouter(gh_service)
-    ''''''
+    
     # Optionally sync repos once at startup
     # The service.sync_repos expects a `user` string (created_by/updated_by).
     sync_user = os.getenv("GITHUB_SYNC_USER", "system")
+    
     try:
         logger.info("Starting GitHub repos sync...")
         synced = gh_service.sync_repos(sync_user)
         logger.info("GitHub sync completed. %d repos synced.", len(synced))
     except Exception as e:
         logger.exception("GitHub sync failed: %s", e)
-    ''''''
+    
     # --- FastAPI app + router
     app.include_router(gh_router.router)
     app.include_router(pubmed_router.router)
@@ -122,20 +124,25 @@ def main() -> FastAPI:
     app.include_router(pypi_router.router)
     
     app.include_router(health_router)
-        '''
+    '''    
 
     epmc_repo = EPMCRepo(session)
     epmc_service = EPMCService(epmc_repo)
-    epmc_router = EPMCRouter(epmc_service)
+    epmc_router = EPMCRouter(epmc_service, session)
     app.include_router(epmc_router.router)
     # move after ingestion success
     grant_service = Grant(epmc_repo)
     #print(epmc_service.highest_versions_by_source_id)
     #grant_service.create_grants("ga4gh")
     start = time.perf_counter()
-    result = epmc_service.insert_articles_by_keyword("rews", created_by="system", epmc_db=session)
+    #result = epmc_service.insert_articles_by_keyword("rews", created_by="system", epmc_db=session)
+    #citations_result = epmc_service.insert_citations(created_by="system")
+    #references_result = epmc_service.insert_references(created_by="system")
+    #grant_result = grant_service.create_grants("ga4gh")
     elapsed = time.perf_counter() - start
-    print(result)
+    #print(result)
+    #print(citations_result)
+    #print(references_result)
     print(f"done data ingestion (elapsed={elapsed:.3f}s)")
     return app
 
