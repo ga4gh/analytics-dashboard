@@ -7,10 +7,14 @@ import uvicorn
 from fastapi import FastAPI
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
+from urllib.parse import quote
 from sqlalchemy.orm import sessionmaker, Session
 
 # config
 from .config.constants import GH_BASE_URL
+from src.config.session import get_session, SessionLocal
+from src.config.engine import engine
 
 # clients / repos / services / routers
 from .clients.github import GithubRepoClient
@@ -58,14 +62,25 @@ def main() -> FastAPI:
     app = FastAPI()
 
     # DB setup
-    db_conn = setup.DatabaseConnection(config.database_url)
-    db_conn.connect()
-    engine = create_engine(config.database_url, pool_pre_ping=True, future=True)  
-    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)   
-    session: Session = SessionLocal()                                             
-    logger.info("Database connected via SQLAlchemy ORM")                          
+    try:
+        sa_url = make_url(config.database_url)
+        user = quote(sa_url.username or "", safe="")
+        pwd = quote(sa_url.password or "", safe="")
+        host = sa_url.host or ""
+        port = sa_url.port or ""
+        dbname = sa_url.database or ""
+        dsn = f"postgresql://{user}:{pwd}@{host}:{port}/{dbname}"
+    except Exception:
+        # Fallback: pass the original URL through (may work if already libpq-compatible)
+        dsn = config.database_url
 
-    '''   
+    db_conn = setup.DatabaseConnection(dsn)
+    db_conn.connect()
+
+    session = SessionLocal()
+    logger.info("Database connected via SQLAlchemy ORM")                           
+
+    # Fields setup
     record_fields = set(Record.model_fields.keys())
     record_sql_builder = sqlbuilder.SQLBuilder("records").allow_fields(record_fields - {"id"})
     record_repo = RecordRepo(db_conn, record_sql_builder)
@@ -78,72 +93,39 @@ def main() -> FastAPI:
     author_sql_builder = sqlbuilder.SQLBuilder("authors").allow_fields(author_fields - {"id"})
     author_repo = AuthorRepo(db_conn, author_sql_builder)
 
-    # Client setup
+    # PubMed setup
     pubmed_client = pubmed.Pubmed(constants.PUBMED_BASE_URL, config.pubmed_api_key)
-
-    # Service setup
     pubmed_service = PubmedService(author_repo, record_repo, article_repo, pubmed_client)
-
-    # Router setup
     pubmed_router = PubmedRouter(pubmed_service)
 
-    # --- GitHub client + service setup
+    # GitHub setup
     gh_api_key = os.getenv("GITHUB_API_KEY", "")
     gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
-
     gh_client = GithubRepoClient(GH_BASE_URL, gh_api_key)
-
     gh_repo_fields = set(GithubRepo.model_fields.keys())
     gh_repo_sql_builder = sqlbuilder.SQLBuilder("github_repos").allow_fields(gh_repo_fields - {"id"})
     gh_repo = GithubRepoRepository(db_conn, gh_repo_sql_builder)
     gh_service = GithubReposService(gh_repo, gh_client, record_repo)
     gh_router = GithubRepoRouter(gh_service)
-    
-    # Optionally sync repos once at startup
-    # The service.sync_repos expects a `user` string (created_by/updated_by).
-    sync_user = os.getenv("GITHUB_SYNC_USER", "system")
-    
-    try:
-        logger.info("Starting GitHub repos sync...")
-        synced = gh_service.sync_repos(sync_user)
-        logger.info("GitHub sync completed. %d repos synced.", len(synced))
-    except Exception as e:
-        logger.exception("GitHub sync failed: %s", e)
-    
-    # --- FastAPI app + router
-    app.include_router(gh_router.router)
-    app.include_router(pubmed_router.router)
 
-
+    # PyPi setup
     pypi_fields = set(PypiModel.model_fields.keys())
     pypi_sql_builder = sqlbuilder.SQLBuilder("pypi").allow_fields(pypi_fields)
     pypi_repo = PypiRepo(db_conn, pypi_sql_builder)
     pypi_service = PypiService(pypi_repo)
     pypi_router = PypiRouter(pypi_service)
 
-    app.include_router(pypi_router.router)
-    
-    app.include_router(health_router)
-    '''    
-
+    # EPMC setup
     epmc_repo = EPMCRepo(session)
     epmc_service = EPMCService(epmc_repo)
     epmc_router = EPMCRouter(epmc_service, session)
+
+    # --- FastAPI app + router
+    app.include_router(gh_router.router)
+    app.include_router(pypi_router.router)
+    app.include_router(pubmed_router.router)
     app.include_router(epmc_router.router)
-    # move after ingestion success
-    grant_service = Grant(epmc_repo)
-    #print(epmc_service.highest_versions_by_source_id)
-    #grant_service.create_grants("ga4gh")
-    start = time.perf_counter()
-    #result = epmc_service.insert_articles_by_keyword("rews", created_by="system", epmc_db=session)
-    #citations_result = epmc_service.insert_citations(created_by="system")
-    #references_result = epmc_service.insert_references(created_by="system")
-    #grant_result = grant_service.create_grants("ga4gh")
-    elapsed = time.perf_counter() - start
-    #print(result)
-    #print(citations_result)
-    #print(references_result)
-    print(f"done data ingestion (elapsed={elapsed:.3f}s)")
+
     return app
 
 
