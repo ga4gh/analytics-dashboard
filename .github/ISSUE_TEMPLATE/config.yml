@@ -1,3 +1,4 @@
+blank_issues_enabled: false
 issue_templates:
   - name: "Bug Report"
     description: "Report a bug in the system."
@@ -7,7 +8,7 @@ issue_templates:
   - name: "Feature Request"
     description: "Propose a new feature or improvement."
     title: "[Feature]: "
-    labels: ["enhancement"]
+    labels: ["enhancement","dev"]
     body: "./ISSUE_TEMPLATE/feature_request.md"
   - name: "Documentation"
     description: "Suggest updates or additions to the documentation."
