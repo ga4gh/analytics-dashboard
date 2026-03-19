@@ -77,7 +77,6 @@ def main() -> FastAPI:
     db_conn = setup.DatabaseConnection(dsn)
     db_conn.connect()
 
-    session = SessionLocal()
     logger.info("Database connected via SQLAlchemy ORM")                           
 
     # Fields setup
@@ -116,9 +115,9 @@ def main() -> FastAPI:
     pypi_router = PypiRouter(pypi_service)
 
     # EPMC setup
-    epmc_repo = EPMCRepo(session)
+    epmc_repo = EPMCRepo(get_session)
     epmc_service = EPMCService(epmc_repo)
-    epmc_router = EPMCRouter(epmc_service, session)
+    epmc_router = EPMCRouter(epmc_service, get_session)
 
     # --- FastAPI app + router
     app.include_router(gh_router.router)
