@@ -8,11 +8,11 @@ class Citation(BaseModel):
     id: Optional[int] = None
     article_id: int
     citation_id: str
-    source: str
-    citation_type: str
-    title: str
-    authors: str
-    pub_year: int
+    source: Optional[str] = None
+    citation_type: Optional[str] = None
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    pub_year: Optional[int] = None
     citation_count: int
 
     model_config = {"from_attributes": True}
@@ -21,11 +21,11 @@ class Reference(BaseModel):
     id: Optional[int] = None
     article_id: int
     reference_id: str
-    source: str
-    citation_type: str
-    title: str
-    authors: str
-    pub_year: int
+    source: Optional[str] = None
+    citation_type: Optional[str] = None
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    pub_year: Optional[int] = None
     ISSN: Optional[str] = None
     ESSN: Optional[str] = None
     cited_order: int

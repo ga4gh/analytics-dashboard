@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS grants (
     id SERIAL PRIMARY KEY,
     record_id INTEGER NOT NULL,
     grant_id VARCHAR(128),
+    ingestion_id INTEGER NOT NULL,
     agency TEXT,
     family_name TEXT,
     given_name TEXT,

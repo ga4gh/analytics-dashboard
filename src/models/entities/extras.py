@@ -13,6 +13,9 @@ class Keyword(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
     value: Mapped[List[str]] = mapped_column(ARRAY(String))  # PostgreSQL array
 
     # Audit fields
@@ -33,6 +36,9 @@ class Grant(Base):
     record_id: Mapped[int] = mapped_column(
         ForeignKey("records.id", ondelete="CASCADE"),
         nullable=False,
+    )
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
     )
 
     # ---------- Core grant fields ----------
@@ -83,6 +89,9 @@ class FullText(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
     availability: Mapped[str] = mapped_column(String(64))
     availability_code: Mapped[str] = mapped_column(String(32))
     document_style: Mapped[str] = mapped_column(String(32))

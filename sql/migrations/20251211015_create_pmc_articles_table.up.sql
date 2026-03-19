@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS pmc_articles (
     id SERIAL PRIMARY KEY,
     record_id INTEGER NOT NULL,
+    ingestion_id INTEGER NOT NULL,
     source VARCHAR(64) NOT NULL,
     pm_id VARCHAR(64),
     pmc_id VARCHAR(64) NOT NULL,

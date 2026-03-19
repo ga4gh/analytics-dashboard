@@ -22,6 +22,9 @@ class PMCArticle(Base):
         ForeignKey("records.id", ondelete="CASCADE"),
         nullable=False,
     )
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
 
     # ---------- Core fields ----------
     source: Mapped[str] = mapped_column(String(64), nullable=False)

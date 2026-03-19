@@ -8,11 +8,17 @@ import json
 
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import func, and_, or_
+from sqlalchemy.sql import literal_column
+from src.config.constants import COUNTRIES, ALIASES
 
 # Reusable ORM entities for cross-table queries
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
 from src.models.entities.extras import FullText, Keyword, Grant
 from src.models.entities.citations import Citation, Reference
+from sqlalchemy import func
+from src.models.entities.record import Record
+from src.models.entities.ingestion import Ingestion
 # from src.models.grant import Grant
 # from src.models.pmc_article import PMCArticle, PMCAffiliation
 
@@ -33,17 +39,22 @@ class EPMCRepo:
         if not isinstance(entity, entity_cls):
             raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
         self.db.add(entity)
-        self.db.commit()
-        self.db.refresh(entity)
+        self.db.flush()
         return entity.id
 
     def update(self, entity: Any, entity_cls: Type[PMCArticle] = PMCArticle) -> Optional[int]:
-        # CHANGE: ORM-only update. Merge the given entity and commit.
+        # CHANGE: ORM-only update. Merge the given entity and flush.
         if not isinstance(entity, entity_cls):
             raise TypeError(f"Expected instance of {entity_cls.__name__}, got {type(entity).__name__}")
         merged = self.db.merge(entity)
-        self.db.commit()
+        self.db.flush()
         return getattr(merged, "id", None)
+
+    def commit_to_db(self) -> None:
+        self.db.commit()
+
+    def rollback(self) -> None:
+        self.db.rollback()
 
     def get_by_id(self, entity_id: int, entity_cls: Type[PMCArticle] = PMCArticle):
         # CHANGE: Return ORM entity (no Pydantic validation).
@@ -145,6 +156,16 @@ class EPMCRepo:
             .all()
         )
 
+    def get_articles_by_keyword(self, keyword: str, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
+        return (
+            self.db.query(PMCArticle)
+            .join(Record, PMCArticle.record_id == Record.id)
+            .filter(Record.keyword.any(keyword))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
     def get_by_keyword_and_date(
         self,
         keyword: str,
@@ -191,165 +212,679 @@ class EPMCRepo:
         while True:
             try:
                 if update:
-                    entity_id = self.update(entity, type)
+                    # entity_id = self.update(entity, type)
+                    entity_id = self.insert(entity, type)
                 else:
                     entity_id = self.insert(entity, type)
-                return entity_id  
+                return entity_id
+                #return 1   
             except OperationalError as e:
                 print(f"ConnectionError: {e}. Retrying after a timeout...")
+                self.db.rollback()
                 time.sleep(5)  
             except Exception as e:
                 print(f"Unexpected error: {e}")
+                self.db.rollback()
                 raise  
 
-    def get_all_articles(self) -> list[PMCArticle]:
+    def get_all_articles(self, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         """
-        Fetch all articles with all child relationships loaded.
+        Fetch articles with child relationships loaded, paginated.
         """
         return (
             self.db.query(PMCArticle)
             .options(
                 selectinload(PMCArticle.article_authors),
                 selectinload(PMCArticle.affiliations),
-                selectinload(PMCArticle.keywords),
-                selectinload(PMCArticle.grants),
                 selectinload(PMCArticle.fulltexts),
                 selectinload(PMCArticle.citations),
                 selectinload(PMCArticle.references),
             )
+            .offset(skip)
+            .limit(limit)
             .all()
         )      
 
-def get_all_articles_old(self) -> list[PMCArticle]:
-    query = """
-    SELECT jsonb_build_object(
-        'id', a.id,
-        'record_id', a.record_id,
-        'source', a.source,
-        'pm_id', a.pm_id,
-        'pmc_id', a.pmc_id,
-        'full_text_id', a.full_text_id,
-        'doi', a.doi,
-        'title', a.title,
-        'pub_year', a.pub_year,
-        'abstract_text', a.abstract_text,
-        'affiliation', a.affiliation,
-        'publicication_status', a.publicication_status,
-        'language', a.language,
-        'pub_type', a.pub_type,
-        'is_open_access', a.is_open_access,
-        'inEPMC', a."inEPMC",
-        'inPMC', a."inPMC",
-        'has_PDF', a."has_PDF",
-        'has_Book', a."has_Book",
-        'has_Suppl", a."has_Suppl",
-        'cited_by_count', a.cited_by_count,
-        'has_references', a.has_references,
-        'date_of_creation', a.date_of_creation,
-        'first_index_date', a.first_index_date,
-        'fulltext_receive_date', a.fulltext_receive_date,
-        'revision_date', a.revision_date,
-        'epub_date', a.epub_date,
-        'first_publication_date', a.first_publication_date,
+    def get_all_grants(self, limit: int = 100, skip: int = 0) -> list[Grant]:
+        return self.db.query(Grant).offset(skip).limit(limit).all()
 
-        'authors', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', au.id,
-                'fullname', au.fullname,
-                'firstname', au.firstname,
-                'lastname', au.lastname,
-                'initials', au.initials,
-                'orcid', au.orcid,
-                'author_order', aa.author_order
-            ) ORDER BY aa.seq_id)
-            FROM articles_authors aa
-            JOIN authors au ON au.id = aa.author_id
-            WHERE aa.article_id = a.id
-        ), '[]'),
+    def get_all_pmc_authors(self, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
+        return self.db.query(PMCAuthor).offset(skip).limit(limit).all()
 
-        'affiliations', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', af.id,
-                'author_id', af.author_id,
-                'org_name', af.org_name,
-                'article_id', af.article_id,
-                'affiliation_order', af.affiliation_order
-            ) ORDER BY af.seq_id)
-            FROM affiliations af
-            WHERE af.article_id = a.id
-        ), '[]'),
+    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
+        return (
+            self.db.query(PMCAuthor)
+            .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
+            .filter(ArticleAuthor.article_id == article_id)
+            .order_by(ArticleAuthor.author_order.asc().nullslast())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-        'keywords', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', k.id,
-                'value', k.value
-            ))
-            FROM keywords k
-            WHERE k.article_id = a.id
-        ), '[]'),
+    def get_articles_by_author_id(self, author_id: int, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
+        return (
+            self.db.query(PMCArticle)
+            .join(ArticleAuthor, ArticleAuthor.article_id == PMCArticle.id)
+            .filter(ArticleAuthor.author_id == author_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-        'grants', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', g.id,
-                'grant_id', g.grant_id,
-                'agency', g.agency
-            ))
-            FROM grants g
-            WHERE g.article_id = a.id
-        ), '[]'),
+    def get_all_article_authors(self, limit: int = 100, skip: int = 0) -> list[ArticleAuthor]:
+        return self.db.query(ArticleAuthor).offset(skip).limit(limit).all()
 
-        'fulltexts', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', f.id,
-                'availibility', f.availibility,
-                'availibility_code', f.availibility_code,
-                'document_style', f.document_style,
-                'site', f.site,
-                'url', f.url
-            ))
-            FROM fulltexts f
-            WHERE f.article_id = a.id
-        ), '[]'),
+    def get_all_pmc_references(self, limit: int = 100, skip: int = 0) -> list[Reference]:
+        return self.db.query(Reference).offset(skip).limit(limit).all()
 
-        'citations', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', c.id,
-                'citation_id', c.citation_id,
-                'source', c.source,
-                'citation_type', c.citation_type,
-                'title', c.title,
-                'authors', c.authors,
-                'pub_year', c.pub_year,
-                'citation_count', c.citation_count
-            ))
-            FROM citations c
-            WHERE c.article_id = a.id
-        ), '[]'),
+    def get_all_citations(self, limit: int = 100, skip: int = 0) -> list[Citation]:
+        return self.db.query(Citation).offset(skip).limit(limit).all()
 
-        'references', COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', r.id,
-                'reference_id', r.reference_id,
-                'source', r.source,
-                'citation_type', r.citation_type,
-                'title', r.title,
-                'authors', r.authors,
-                'pub_year', r.pub_year,
-                'ISSN', r."ISSN",
-                'ESSN', r."ESSN",
-                'cited_order', r.cited_order,
-                'match', r.match
-            ) ORDER BY r.cited_order)
-            FROM "references" r
-            WHERE r.article_id = a.id
-        ), '[]')
-    )
-    FROM pmc_articles a;
-    """
+    def get_all_fulltexts(self, limit: int = 100, skip: int = 0) -> list[FullText]:
+        return self.db.query(FullText).offset(skip).limit(limit).all()
 
-    with self.db.get_connection() as conn, conn.cursor() as cur:
-        cur.execute(query)
-        rows = cur.fetchall()
+    def get_all_pmc_affiliations(self, limit: int = 100, skip: int = 0) -> list[PMCAffiliation]:
+        return self.db.query(PMCAffiliation).offset(skip).limit(limit).all()
 
-    return [PMCArticle.model_validate(row[0]) for row in rows]
+    def get_all_articles_ids(self) -> list[tuple[str | None, int]]:
+        return (
+            self.db.query(PMCArticle.pm_id, PMCArticle.record_id)
+            .all()
+        )
 
+    def _get_latest_version_subquery(self, entity_class: Type[Any]):
+        """
+        Helper function to create a subquery that groups an entity by its primary key
+        and returns (entity.id, max(ingestion.version)) for each unique entity.
+        
+        This encapsulates the grouping pattern used to get the latest version of each
+        unique entity, avoiding duplication between version-tracking functions.
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            
+        Returns:
+            A subquery with columns 'id' and 'max_version'
+        """
+        return (
+            self.db.query(
+                entity_class.id,
+                func.max(Ingestion.version).label('max_version')
+            )
+            .select_from(entity_class)
+            .outerjoin(Ingestion, entity_class.ingestion_id == Ingestion.id)
+            .group_by(entity_class.id)
+            .subquery()
+        )
+
+    def _get_latest_version_subquery_by_column(self, entity_class: Type[Any], group_column):
+        """
+        Helper function to create a subquery that groups an entity by a custom column
+        and returns (group_column, max(ingestion.version)) for each unique group.
+        
+        Useful for getting latest versions grouped by a business key (e.g., citation_id)
+        rather than the primary key.
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            group_column: The column to group by (e.g., Citation.citation_id)
+            
+        Returns:
+            A subquery with columns matching the group_column name and 'max_version'
+        """
+        return (
+            self.db.query(
+                group_column,
+                func.max(Ingestion.version).label('max_version')
+            )
+            .select_from(entity_class)
+            .outerjoin(Ingestion, entity_class.ingestion_id == Ingestion.id)
+            .group_by(group_column)
+            .subquery()
+        )
+
+
+    def _get_latest_entities(self, entity_class: Type[Any], limit: int = 100, skip: int = 0) -> list[Any]:
+        """
+        Get all latest versions of a given entity type grouped by their unique id.
+        
+        Returns only the highest ingestion version for each unique entity.
+        Also handles entities without ingestion_id (includes those in results).
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            limit: Maximum number of entities to return (default: 100)
+            skip: Number of entities to skip for pagination (default: 0)
+            
+        Returns:
+            List of entity instances with the latest version for each unique entity
+        """
+        version_subq = self._get_latest_version_subquery(entity_class)
+        
+        return (
+            self.db.query(entity_class)
+            .join(version_subq, entity_class.id == version_subq.c.id)
+            .outerjoin(Ingestion, entity_class.ingestion_id == Ingestion.id)
+            .filter(
+                (Ingestion.version == version_subq.c.max_version) |
+                (entity_class.ingestion_id.is_(None))
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    def _get_latest_entities_by_column(self, entity_class: Type[Any], group_column, limit: int = 100, skip: int = 0) -> list[Any]:
+        """
+        Get latest versions of entities grouped by a custom column (not primary key).
+        
+        For each unique value of group_column, returns only the entity with the highest
+        ingestion version. Useful for getting unique business-keyed entities where
+        different rows may represent different versions of the same logical entity.
+        
+        Uses a window function (row_number) approach for efficient pagination.
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            group_column: The column to group by (e.g., Citation.citation_id)
+            limit: Maximum number of unique entities to return (default: 100)
+            skip: Number of unique entities to skip for pagination (default: 0)
+            
+        Returns:
+            List of entity instances with the latest version for each unique group
+        """
+        # Create a subquery that ranks rows within each group by ingestion version (descending)
+        # Entities without ingestion_id get highest rank (treated as most recent)
+        version_subq = (
+            self.db.query(
+                entity_class.id,
+                func.row_number().over(
+                    partition_by=group_column,
+                    order_by=Ingestion.version.desc().nullslast()
+                ).label('rn')
+            )
+            .outerjoin(Ingestion, entity_class.ingestion_id == Ingestion.id)
+            .subquery()
+        )
+        
+        # Query entities where row number is 1 (latest version per group)
+        return (
+            self.db.query(entity_class)
+            .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+
+    def _get_entities_by_column_value(self, entity_class: Type[Any], column_name: str, value: Any, limit: int = 100, skip: int = 0) -> list[Any]:
+        """
+        Get entities filtered by a specific column value.
+        
+        Generic helper to fetch all instances of an entity where a given column matches a value.
+        Useful for getting all child entities related to a parent (e.g., all keywords for an article).
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            column_name: The name of the column to filter on (as string)
+            value: The value to match
+            
+        Returns:
+            List of entity instances matching the filter
+        """
+        column = getattr(entity_class, column_name)
+        return self.db.query(entity_class).filter(column == value).offset(skip).limit(limit).all()
+
+    def _get_max_versions_by_columns(
+        self,
+        entity_class: Type[Any],
+        columns: list,
+        key_label: str,
+        value_normalizer=None,
+        skip_none_on_index: int = None
+    ) -> dict[str, int]:
+        """
+        Get max ingestion version grouped by specified columns.
+        
+        Generic helper to query max(ingestion.version) grouped by one or more columns,
+        returning a dict mapping formatted keys to version numbers.
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            columns: List of column objects to select and group by
+            key_label: Label for the result key (e.g., "article", "grant", "fulltext")
+            value_normalizer: Optional callable to transform/filter grouped values before key creation
+                             Should accept a tuple of grouped values and return transformed tuple or None to skip
+            skip_none_on_index: Optional index - skip rows where columns[skip_none_on_index] is None
+            
+        Returns:
+            Dict mapping "label:val1:val2..." to max_version
+        """
+        result = {}
+        
+        query = self.db.query(*columns, func.max(Ingestion.version))
+        
+        # Join ingestion and filter by ingestion_id
+        query = query.join(Ingestion, entity_class.ingestion_id == Ingestion.id)
+        query = query.filter(entity_class.ingestion_id.isnot(None))
+        query = query.group_by(*columns)
+        
+        for row in query.all():
+            *values, max_ver = row
+            
+            # Handle None checks
+            if skip_none_on_index is not None and values[skip_none_on_index] is None:
+                continue
+            
+            # Apply normalization if provided
+            if value_normalizer:
+                normalized = value_normalizer(tuple(values))
+                if normalized is None:
+                    continue
+                values = list(normalized)
+            
+            # Build key from label and values
+            if len(values) == 1:
+                key = f"{key_label}:{values[0]}"
+            else:
+                key = f"{key_label}:{':'.join(str(v) for v in values)}"
+            
+            result[key] = max_ver
+        
+        return result
+
+
+
+
+    def get_max_version_by_source_id(self) -> dict[str, int]:
+        """
+        Returns a dict mapping a descriptive source-id key for every ePMC entity row
+        to the highest ingestion.version value linked to that row via ingestion_id.
+
+                Key format: "<table_label>:<source_identifier>"
+                    articles       -> "article:<pm_id>"
+                    authors        -> "author:<id>"
+                    article_authors-> "article_author:<pm_id>:<author_id>"
+                    affiliations   -> "affiliation:<pm_id>:<author_id>"
+                    grants         -> "grant:<grant_id>"
+                    fulltexts      -> "fulltext:<url>"
+                    citations      -> "citation:<citation_id>"
+                    references     -> "reference:<reference_id>"
+        """
+        result: dict[str, int] = {}
+
+        # pmc_articles  ->  key: "article:<pm_id>"
+        result.update(self._get_max_versions_by_columns(
+            PMCArticle,
+            [PMCArticle.pm_id],
+            "article"
+        ))
+
+        # pmc_authors  ->  key: "author:<id>"
+        result.update(self._get_max_versions_by_columns(
+            PMCAuthor,
+            [PMCAuthor.id],
+            "author"
+        ))
+
+        # articles_authors  ->  key: "article_author:<pm_id>:<author_id>"
+        # Need custom join for this one since it requires PMCArticle.pm_id
+        for pm_id, author_id, max_ver in (
+            self.db.query(PMCArticle.pm_id, ArticleAuthor.author_id, func.max(Ingestion.version))
+            .join(ArticleAuthor, ArticleAuthor.article_id == PMCArticle.id)
+            .join(Ingestion, ArticleAuthor.ingestion_id == Ingestion.id)
+            .filter(ArticleAuthor.ingestion_id.isnot(None))
+            .group_by(PMCArticle.pm_id, ArticleAuthor.author_id)
+            .all()
+        ):
+            if pm_id is None:
+                continue
+            result[f"article_author:{pm_id}:{author_id}"] = max_ver
+
+        # pmc_affiliations  ->  key: "affiliation:<pm_id>:<author_id>"
+        # Also requires custom join for PMCArticle.pm_id
+        for pm_id, author_id, max_ver in (
+            self.db.query(PMCArticle.pm_id, PMCAffiliation.author_id, func.max(Ingestion.version))
+            .join(PMCAffiliation, PMCAffiliation.article_id == PMCArticle.id)
+            .join(Ingestion, PMCAffiliation.ingestion_id == Ingestion.id)
+            .filter(PMCAffiliation.ingestion_id.isnot(None))
+            .group_by(PMCArticle.pm_id, PMCAffiliation.author_id)
+            .all()
+        ):
+            if pm_id is None:
+                continue
+            result[f"affiliation:{pm_id}:{author_id}"] = max_ver
+
+        # grants  ->  key: "grant:<grant_id>"
+        result.update(self._get_max_versions_by_columns(
+            Grant,
+            [Grant.grant_id],
+            "grant"
+        ))
+
+        # fulltexts  ->  key: "fulltext:<normalized_url>"
+        def normalize_url(values):
+            """Normalize URL for consistent key matching."""
+            url = values[0]
+            if url is None:
+                return None
+            norm = str(url).strip().lower()
+            if norm.endswith("/"):
+                norm = norm.rstrip("/")
+            if not norm:
+                return None
+            return (norm,)
+        
+        result.update(self._get_max_versions_by_columns(
+            FullText,
+            [FullText.url],
+            "fulltext",
+            value_normalizer=normalize_url
+        ))
+
+        # citations  ->  key: "citation:<citation_id>"
+        result.update(self._get_max_versions_by_columns(
+            Citation,
+            [Citation.citation_id],
+            "citation"
+        ))
+
+        # pmc_references  ->  key: "reference:<reference_id>"
+        result.update(self._get_max_versions_by_columns(
+            Reference,
+            [Reference.reference_id],
+            "reference"
+        ))
+
+        return result
+
+
+    def get_highest_ingestion_version(self) -> int:
+        """Return the highest `version` value from the `ingestion` table.
+
+        Returns 0 if there are no ingestion rows.
+        """
+        max_ver = self.db.query(func.max(Ingestion.version)).scalar()
+        try:
+            return int(max_ver) if max_ver is not None else 0
+        except Exception:
+            return 0
+        
+    def get_all_latest_entries(self, pm_id: Optional[str] = None, limit: int = 100, skip: int = 0) -> dict[str, list[Any]]:
+        """
+        Get all unique entries from all tables with the most recent version FOR EACH ENTITY.
+        
+        For each unique entity (by pm_id, author_id, etc), returns only the version with the
+        highest ingestion.version. This means an article can be on version 4 while the latest
+        ingestion in the system is version 7 - we still return that article version 4.
+        
+        If pm_id is provided, returns only data associated with that specific article.
+        Otherwise, returns latest version of every unique entity across all tables.
+        
+        Args:
+            pm_id: Optional PubMed ID (source_id) to filter by a specific article
+            limit: Maximum number of entities to return per table (default: 100)
+            skip: Number of entities to skip per table for pagination (default: 0)
+        
+        Returns:
+            A dictionary with table names as keys and lists of latest entries as values.
+        """
+        result = {}
+        
+        if pm_id:
+            # Get the specific article first
+            article = (
+                self.db.query(PMCArticle)
+                .filter(PMCArticle.pm_id == pm_id)
+                .first()
+            )
+            if not article:
+                # Article not found, return empty result
+                return {
+                    'pmc_articles': [],
+                    'pmc_authors': [],
+                    'pmc_affiliations': [],
+                    'articles_authors': [],
+                    'citations': [],
+                    'pmc_references': [],
+                    'grants': [],
+                    'fulltexts': []
+                }
+            
+            article_id = article.id
+            record_id = article.record_id
+            
+            result['pmc_articles'] = [article]
+            
+            # Get authors for this article (reuse existing method)
+            result['pmc_authors'] = self.get_authors_by_article_id(article_id, limit=limit, skip=skip)
+            
+            # Get all other article-related entities by article_id
+            result['pmc_affiliations'] = self._get_entities_by_column_value(PMCAffiliation, 'article_id', article_id, limit=limit, skip=skip)
+            result['articles_authors'] = self._get_entities_by_column_value(ArticleAuthor, 'article_id', article_id, limit=limit, skip=skip)
+            result['citations'] = self._get_entities_by_column_value(Citation, 'article_id', article_id, limit=limit, skip=skip)
+            result['pmc_references'] = self._get_entities_by_column_value(Reference, 'article_id', article_id, limit=limit, skip=skip)
+            result['fulltexts'] = self._get_entities_by_column_value(FullText, 'article_id', article_id, limit=limit, skip=skip)
+            
+            # Get grants for the same record (by record_id)
+            result['grants'] = self._get_entities_by_column_value(Grant, 'record_id', record_id, limit=limit, skip=skip)
+        else:
+            # Get latest version of each UNIQUE entity across all tables with pagination
+            result['pmc_articles'] = self._get_latest_entities(PMCArticle, limit=limit, skip=skip)
+            result['pmc_authors'] = self._get_latest_entities(PMCAuthor, limit=limit, skip=skip)
+            result['pmc_affiliations'] = self._get_latest_entities(PMCAffiliation, limit=limit, skip=skip)
+            result['articles_authors'] = self._get_latest_entities(ArticleAuthor, limit=limit, skip=skip)
+            result['citations'] = self._get_latest_entities(Citation, limit=limit, skip=skip)
+            result['pmc_references'] = self._get_latest_entities(Reference, limit=limit, skip=skip)
+            result['grants'] = self._get_latest_entities(Grant, limit=limit, skip=skip)
+            result['fulltexts'] = self._get_latest_entities(FullText, limit=limit, skip=skip)
+        
+        return result
+
+    def get_unique_articles(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Get count of articles by unique pm_id.
+        
+        Returns the number of occurrences for each unique pm_id in the pmc_articles table.
+        
+        Args:
+            limit: Maximum number of unique pm_ids to return (default: 100)
+            skip: Number of unique pm_ids to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping pm_id to count of occurrences
+        """
+        return self._get_count_by_column(PMCArticle, PMCArticle.pm_id, skip_none=True, limit=limit, skip=skip)
+
+    def get_unique_grants(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Get count of grants by unique grant_id.
+        
+        Returns the number of occurrences for each unique grant_id in the grants table.
+        Note: grant_id may be None/empty in some rows.
+        
+        Args:
+            limit: Maximum number of unique grant_ids to return (default: 100)
+            skip: Number of unique grant_ids to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping grant_id to count of occurrences
+        """
+        return self._get_count_by_column(Grant, Grant.grant_id, skip_none=False, limit=limit, skip=skip)
+
+    def get_unique_authors(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Get count of authors by unique firstname+lastname combination.
+        
+        Returns the number of occurrences for each unique author name in the pmc_authors table.
+        
+        Args:
+            limit: Maximum number of unique author combinations to return (default: 100)
+            skip: Number of unique author combinations to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping "firstname:lastname" to count of occurrences
+        """
+        result = {}
+        query = (self.db.query(
+            PMCAuthor.firstname,
+            PMCAuthor.lastname,
+            func.count().label('count')
+        ).group_by(PMCAuthor.firstname, PMCAuthor.lastname)
+        .offset(skip)
+        .limit(limit))
+        
+        for firstname, lastname, count in query.all():
+            key = f"{firstname}:{lastname}"
+            result[key] = count
+        
+        return result
+
+    def get_unique_references(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Get count of references by unique reference_id.
+        
+        Returns the number of occurrences for each unique reference_id in the pmc_references table.
+        Note: reference_id may be None/empty in some rows.
+        
+        Args:
+            limit: Maximum number of unique reference_ids to return (default: 100)
+            skip: Number of unique reference_ids to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping reference_id to count of occurrences
+        """
+        return self._get_count_by_column(Reference, Reference.reference_id, skip_none=False, limit=limit, skip=skip)
+
+    def get_unique_fulltexts(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Get count of fulltexts by unique url.
+        
+        Returns the number of occurrences for each unique url in the fulltexts table.
+        
+        Args:
+            limit: Maximum number of unique urls to return (default: 100)
+            skip: Number of unique urls to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping url to count of occurrences
+        """
+        return self._get_count_by_column(FullText, FullText.url, skip_none=True, limit=limit, skip=skip)
+
+    def get_affiliation_countries_count(self) -> dict[str, int]:
+        """
+        Extract countries from pmc_affiliations org_name and return count by country.
+        
+        Extracts the country from org_name strings in format:
+        "Organization text, Country."
+        The country is the text after the last comma and before the period.
+        
+        Returns:
+            Dictionary mapping country names to their occurrence counts in affiliations.
+            Example: {"China": 42, "USA": 15, "Japan": 8}
+        """
+        affiliations = self.db.query(PMCAffiliation.org_name).all()
+        
+        country_count: dict[str, int] = {}
+        
+        # Prepare sorted country names for longest-first matching
+        sorted_countries = sorted(COUNTRIES, key=lambda s: len(s), reverse=True)
+
+        # Normalize alias keys for quick lookup
+        alias_items = [(k.lower(), v) for k, v in ALIASES.items()]
+
+        for (org_name,) in affiliations:
+            if not org_name:
+                continue
+
+            normalized = org_name.lower()
+            found_country = None
+
+            # 1) Check aliases first (e.g., 'USA', 'UK', 'U.S.A.')
+            for alias, canonical in alias_items:
+                if alias in normalized:
+                    found_country = canonical
+                    break
+
+            if found_country:
+                country_count[found_country] = country_count.get(found_country, 0) + 1
+                continue
+
+            # 2) Check full country names (longest-first)
+            for country in sorted_countries:
+                if country.lower() in normalized:
+                    found_country = country
+                    break
+
+            if found_country:
+                country_count[found_country] = country_count.get(found_country, 0) + 1
+                continue
+
+            # 3) Fallback to legacy parsing: text after last "," and before "."
+            try:
+                last_comma_idx = org_name.rfind(',')
+                if last_comma_idx == -1:
+                    continue
+
+                period_idx = org_name.find('.', last_comma_idx)
+                if period_idx == -1:
+                    country = org_name[last_comma_idx + 1:].strip()
+                else:
+                    country = org_name[last_comma_idx + 1:period_idx].strip()
+
+                if country:
+                    country_count[country] = country_count.get(country, 0) + 1
+            except Exception:
+                # Skip entries that can't be parsed
+                continue
+        
+        return country_count
+
+    def _get_count_by_column(self, entity_class: Type[Any], column, skip_none: bool = False, limit: int = 100, skip: int = 0) -> dict[str, int]:
+        """
+        Count occurrences of each unique value in a specified column.
+        
+        Groups by the column and returns a dict mapping unique values to their counts.
+        Useful for getting unique identifier counts (e.g., citation_id, pm_id, grant_id).
+        
+        Args:
+            entity_class: The SQLAlchemy entity class to query
+            column: The column to group by and count
+            skip_none: If True, skip rows where column value is None
+            limit: Maximum number of unique values to return (default: 100)
+            skip: Number of unique values to skip for pagination (default: 0)
+            
+        Returns:
+            Dict mapping unique column values to their occurrence counts
+        """
+        result = {}
+        
+        query = self.db.query(column, func.count().label('count')).group_by(column)
+        
+        if skip_none:
+            query = query.filter(column.isnot(None))
+        
+        query = query.offset(skip).limit(limit)
+        
+        for value, count in query.all():
+            key = str(value) if value is not None else "<null>"
+            result[key] = count
+        
+        return result
+
+    def get_unique_citations(self, limit: int = 100, skip: int = 0) -> list[Citation]:
+        """
+        Get unique citations by citation_id with the highest ingestion version.
+        
+        For each unique citation_id, returns only the Citation entity with the highest ingestion version.
+        If a citation row has no ingestion_id, it is included in the results.
+        
+        Args:
+            limit: Maximum number of unique citations to return (default: 100)
+            skip: Number of unique citations to skip for pagination (default: 0)
+            
+        Returns:
+            List of Citation entities, one per unique citation_id with highest version
+        """
+        return self._get_latest_entities_by_column(Citation, Citation.citation_id, limit=limit, skip=skip)

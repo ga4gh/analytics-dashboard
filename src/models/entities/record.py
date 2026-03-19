@@ -69,7 +69,6 @@ class Record(Base):
         SAEnum(ProductType, native_enum=False), nullable=True
     )
 
-
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

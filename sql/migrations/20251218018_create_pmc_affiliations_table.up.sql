@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS pmc_affiliations (
     id SERIAL PRIMARY KEY,
     author_id INTEGER NOT NULL,
+    ingestion_id INTEGER NOT NULL,
     org_name TEXT,
     article_id INTEGER NOT NULL,
     affiliation_order INTEGER NOT NULL,

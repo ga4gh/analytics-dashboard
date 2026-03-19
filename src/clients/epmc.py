@@ -6,6 +6,7 @@ from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAut
 from src.models.entities.extras import FullText, Grant
 from src.models.entities.citations import Citation, Reference
 from src.models.entities.record import Record, RecordType, Source, Status, ProductType
+from src.models.entities.ingestion import Ingestion
 
 import requests
 import pandas as pd
@@ -20,10 +21,11 @@ class EPMCClient:
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
-    def create_article(self, article_data, record_id, created_by: str = "system") -> PMCArticle:
+    def create_article(self, article_data, record_id, ingestion_id: int, created_by: str = "system") -> PMCArticle:
         return PMCArticle(
             id=None,  
-            record_id=record_id,  
+            record_id=record_id,
+            ingestion_id=ingestion_id,
             source=article_data.get("source", ""),
             pm_id=article_data.get("id"),
             pmc_id=article_data.get("pmcid", "") or "",
@@ -59,10 +61,11 @@ class EPMCClient:
             version=1,
         )
 
-    def create_author(self, author_data, created_by: str = "system") -> PMCAuthor:
+    def create_author(self, author_data, ingestion_id: int, created_by: str = "system") -> PMCAuthor:
         author_order = int(author_data.get("authorOrder") or 0)
         return PMCAuthor(
             id=None,
+            ingestion_id=ingestion_id,
             fullname=author_data.get("fullName", "") or "",
             firstname=author_data.get("firstName"),
             lastname=author_data.get("lastName"),
@@ -82,10 +85,12 @@ class EPMCClient:
         article_id: int,
         author_id: int,
         author_order: int,
+        ingestion_id: int,
         created_by: str = "system",
     ) -> ArticleAuthor:
         return ArticleAuthor(
             id=None,
+            ingestion_id=ingestion_id,
             article_id=article_id,
             author_id=author_id,
             author_order=author_order,
@@ -104,11 +109,13 @@ class EPMCClient:
         author_id: int,
         article_id: int,
         affiliation_order: int,
+        ingestion_id: int,
         created_by: str = "system",
     ) -> PMCAffiliation:
         org_name = affiliation_data.get("affiliation") if isinstance(affiliation_data, dict) else affiliation_data
         return PMCAffiliation(
             id=None,
+            ingestion_id=ingestion_id,
             author_id=author_id,
             article_id=article_id,
             org_name=org_name,
@@ -122,9 +129,10 @@ class EPMCClient:
             version=1,
         )
 
-    def create_grant(self, article_data, record_id: int, created_by: str = "system") -> Grant:
+    def create_grant(self, article_data, record_id: int, ingestion_id: int, created_by: str = "system") -> Grant:
         return Grant(
             id=None,
+            ingestion_id=ingestion_id,
             record_id=record_id,
             grant_id=article_data.get("grantId") or article_data.get("grant_id"),
             agency=article_data.get("agency"),
@@ -147,10 +155,11 @@ class EPMCClient:
             version=1,
         )
 
-    def create_citation(self, cite, article_id: int, created_by: str = "system") -> Citation:
+    def create_citation(self, cite, article_id: int, ingestion_id: int, created_by: str = "system") -> Citation:
 
         return Citation(
             id=None,
+            ingestion_id=ingestion_id,
             article_id=article_id,
             citation_id=str(cite.get("id")) if cite.get("id") is not None else None,
             source=cite.get("source"),
@@ -168,9 +177,10 @@ class EPMCClient:
             version=1,
         )
 
-    def create_reference(self, ref, article_id: int, created_by: str = "system") -> Reference:
+    def create_reference(self, ref, article_id: int, ingestion_id: int, created_by: str = "system") -> Reference:
         return Reference(
             id=None,
+            ingestion_id=ingestion_id,
             article_id=article_id,
             reference_id=str(ref.get("id")) if ref.get("id") is not None else None,
             source=ref.get("source"),
@@ -191,7 +201,7 @@ class EPMCClient:
             version=1,
         )
 
-    def create_grant_api(self, gr, record_id: int, created_by: str = "system") -> Grant:
+    def create_grant_api(self, gr, record_id: int, ingestion_id: int, created_by: str = "system") -> Grant:
         person = gr.get("Person") or {}
         grant_info = gr.get("Grant") or {}
         institution = gr.get("Institution") or {}
@@ -209,6 +219,7 @@ class EPMCClient:
 
         return Grant(
             id=None,
+            ingestion_id=ingestion_id,
             record_id=record_id,
             grant_id=grant_info.get("Id"),
             agency=funder.get("Name"),
@@ -233,9 +244,10 @@ class EPMCClient:
             version=1,
         )
 
-    def create_fulltext(self, article_id: int, ft, created_by: str = "system") -> FullText:
+    def create_fulltext(self, article_id: int, ft, ingestion_id: int, created_by: str = "system") -> FullText:
         return FullText(
             id=None,
+            ingestion_id=ingestion_id,
             article_id=article_id,
             availability=ft.get("availability"),
             availability_code=ft.get("availabilityCode"),
@@ -253,8 +265,8 @@ class EPMCClient:
 
     def create_record(self, type: str, keyword: str) -> Record:
         return Record(
-            id=None,  
-            record_type= RecordType.Article if type == "ARTICLE" else RecordType.Grant,
+            id=None,
+            record_type=RecordType.Article if type == "ARTICLE" else RecordType.Grant,
             source=Source.Europe_PMC,
             status=Status.Approved,
             keyword=[keyword],
@@ -262,6 +274,16 @@ class EPMCClient:
             created_by="system",
             updated_by="system",
             version=1,
+        )
+    
+
+    def create_ingestion(self, version, created_by: str = "system") -> Ingestion:
+        return Ingestion(
+            id=None,
+            ingested_at=datetime.utcnow(), 
+            created_by=created_by,
+            created_at=datetime.utcnow(),
+            version=version,
         )
 
     def get_articles(self, keyword):
