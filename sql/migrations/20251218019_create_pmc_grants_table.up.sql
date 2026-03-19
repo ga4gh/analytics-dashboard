@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS grants (
     version INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT fk_grants_record
       FOREIGN KEY (record_id)
-      REFERENCES record (id)
+      REFERENCES records (id)
       ON DELETE CASCADE
 );
 
