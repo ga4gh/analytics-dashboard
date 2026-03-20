@@ -1,0 +1,108 @@
+from datetime import datetime
+from typing import Dict, List, Optional, Any
+
+from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+
+class Keyword(Base):
+    __tablename__ = "pmc_keywords"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
+    value: Mapped[List[str]] = mapped_column(ARRAY(String))  # PostgreSQL array
+
+    # Audit fields
+    created_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    updated_by: Mapped[Optional[str]] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    deleted_by: Mapped[Optional[str]] = mapped_column(String(64))
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class Grant(Base):
+    __tablename__ = "grants"
+
+    # ---------- PK / FK ----------
+    id: Mapped[int] = mapped_column(primary_key=True)
+    record_id: Mapped[int] = mapped_column(
+        ForeignKey("records.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
+
+    # ---------- Core grant fields ----------
+    grant_id: Mapped[Optional[str]] = mapped_column(String(128))
+    agency: Mapped[Optional[str]] = mapped_column(Text)
+
+    family_name: Mapped[Optional[str]] = mapped_column(Text)
+    given_name: Mapped[Optional[str]] = mapped_column(Text)
+    initials: Mapped[Optional[str]] = mapped_column(Text)
+    alias: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSONB)
+    orcid: Mapped[Optional[str]] = mapped_column(Text)
+
+    funder_name: Mapped[Optional[str]] = mapped_column(Text)
+    doi: Mapped[Optional[str]] = mapped_column(Text)
+    title: Mapped[Optional[str]] = mapped_column(Text)
+    abstract: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSONB)
+
+    start_date: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+    end_date: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+
+    institution_name: Mapped[Optional[str]] = mapped_column(Text)
+
+    # ---------- Audit ----------
+    created_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+    )
+    updated_by: Mapped[Optional[str]] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+    )
+    deleted_by: Mapped[Optional[str]] = mapped_column(String(64))
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class FullText(Base):
+    __tablename__ = "fulltexts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("pmc_articles.id", ondelete="CASCADE"), nullable=False)
+    ingestion_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("ingestion.id", ondelete="SET NULL"),
+    )
+    availability: Mapped[str] = mapped_column(String(64))
+    availability_code: Mapped[str] = mapped_column(String(32))
+    document_style: Mapped[str] = mapped_column(String(32))
+    site: Mapped[str] = mapped_column(String(64))
+    url: Mapped[str] = mapped_column(Text)
+
+    # Audit fields
+    created_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    updated_by: Mapped[Optional[str]] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    deleted_by: Mapped[Optional[str]] = mapped_column(String(64))
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
+    version: Mapped[int] = mapped_column(Integer, default=1)
