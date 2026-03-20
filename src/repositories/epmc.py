@@ -137,12 +137,12 @@ class EPMCRepo:
             .first()
         )
     
-    def get_affiliation(self, article_id: int, reference_id: str) -> PMCAffiliation | None:
+    def get_affiliation(self, article_id: int, author_id: int) -> PMCAffiliation | None:
         return (
-            self.db.query(Reference)
+            self.db.query(PMCAffiliation)
             .filter(
-                Reference.article_id == article_id,
-                Reference.reference_id == reference_id,
+                PMCAffiliation.article_id == article_id,
+                PMCAffiliation.author_id == author_id,
             )
             .first()
         )
