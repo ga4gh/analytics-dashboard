@@ -1,11 +1,12 @@
-fastapi==0.120.0
+
+fastapi==0.124.0
 uvicorn==0.38.0
 
 # Database
 sqlalchemy==2.0.36
 alembic==1.13.3
-psycopg==3.2.13
-psycopg-binary==3.2.10
+psycopg==3.3.2
+psycopg-binary==3.3.2
 psycopg-pool==3.2.6
 
 # Validation / config
@@ -19,13 +20,15 @@ types-requests==2.32.4.20250913
 httpx==0.28.1
 
 # Testing
-pytest==8.4.2
+=======
+uvicorn==0.38.0
+pytest==9.0.2
 pytest-cov==7.0.0
 
 # Data / viz
 xmltodict==1.0.2
 matplotlib==3.9.2
-pandas==2.2.3
+pandas==2.3.3
 seaborn==0.13.2
 dash==2.18.1
 plotly==5.24.1

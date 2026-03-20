@@ -8,7 +8,7 @@ issue_templates:
   - name: "Feature Request"
     description: "Propose a new feature or improvement."
     title: "[Feature]: "
-    labels: ["enhancement"]
+    labels: ["enhancement","dev"]
     body: "./ISSUE_TEMPLATE/feature_request.md"
   - name: "Documentation"
     description: "Suggest updates or additions to the documentation."
@@ -20,7 +20,3 @@ issue_templates:
     title: "[General]: "
     labels: ["general"]
     body: "./ISSUE_TEMPLATE/general_report.md"
-contact_links:
-  - name: 🐞 Bug Report
-    url: https://github.com/ga4gh/analytics-dashboard/new/main/.github/ISSUE_TEMPLATE/bug.yml
-    about: Please file a bug/issue report.
