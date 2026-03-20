@@ -22,6 +22,6 @@ CREATE TABLE IF NOT EXISTS pmc_affiliations (
       ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_affiliations_author_id ON affiliations(author_id);
-CREATE INDEX IF NOT EXISTS idx_affiliations_article_id ON affiliations(article_id);
-CREATE INDEX IF NOT EXISTS idx_affiliations_org ON affiliations(org_name);
+CREATE INDEX IF NOT EXISTS idx_affiliations_author_id ON pmc_affiliations(author_id);
+CREATE INDEX IF NOT EXISTS idx_affiliations_article_id ON pmc_affiliations(article_id);
+CREATE INDEX IF NOT EXISTS idx_affiliations_org ON pmc_affiliations(org_name);
