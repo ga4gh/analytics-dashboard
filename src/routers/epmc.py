@@ -39,10 +39,8 @@ class EPMC:
                     # Convert ORM entity to Pydantic model
                     validated.append(PMCArticleFull.model_validate(a))
 
-                self.db.commit()
                 return validated
             except Exception as e:
-                self.db.rollback()
                 raise HTTPException(status_code=500, detail=f"Failed to fetch articles: {str(e)}")
 
         @self.router.get("/epmc/all-grants")
