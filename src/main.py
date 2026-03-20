@@ -124,6 +124,7 @@ def main() -> FastAPI:
     app.include_router(pypi_router.router)
     app.include_router(pubmed_router.router)
     app.include_router(epmc_router.router)
+    app.include_router(health_router.router)
 
     return app
 
