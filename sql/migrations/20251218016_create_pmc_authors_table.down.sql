@@ -1,3 +1,3 @@
-DROP TABLE IF EXISTS authors;
-DROP INDEX IF EXISTS idx_authors_orcid;
-DROP INDEX IF EXISTS idx_authors_lastname;
+DROP TABLE IF EXISTS pmc_authors;
+DROP INDEX IF EXISTS idx_pmc_authors_orcid;
+DROP INDEX IF EXISTS idx_pmc_authors_lastname;

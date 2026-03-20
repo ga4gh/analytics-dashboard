@@ -1,17 +1,18 @@
 CREATE TABLE IF NOT EXISTS grants (
     id SERIAL PRIMARY KEY,
     record_id INTEGER NOT NULL,
-    grant_id VARCHAR(128),
-    ingestion_id INTEGER NOT NULL,
+    grant_id TEXT,
+    ingestion_id INTEGER,
     agency TEXT,
     family_name TEXT,
     given_name TEXT,
     initials TEXT,
-    alias TEXT[],
+    alias JSONB,
     orcid TEXT,
     funder_name TEXT,
     doi TEXT,
     title TEXT,
+    abstract JSONB,
     start_date TIMESTAMPTZ,
     end_date TIMESTAMPTZ,
     institution_name TEXT,
@@ -25,7 +26,11 @@ CREATE TABLE IF NOT EXISTS grants (
     CONSTRAINT fk_grants_record
       FOREIGN KEY (record_id)
       REFERENCES records (id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    CONSTRAINT fk_grants_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_grants_record_id ON grants(record_id);

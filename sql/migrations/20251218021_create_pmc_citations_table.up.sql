@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS citations (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
-    ingestion_id INTEGER NOT NULL,
+    ingestion_id INTEGER,
     citation_id VARCHAR(128),
     source VARCHAR(64),
-    citation_type VARCHAR(64),
+    citation_type VARCHAR(500),
     title TEXT,
     authors TEXT,
     pub_year INTEGER,
@@ -19,7 +19,11 @@ CREATE TABLE IF NOT EXISTS citations (
     CONSTRAINT fk_citations_article
       FOREIGN KEY (article_id)
       REFERENCES pmc_articles (id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    CONSTRAINT fk_citations_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_citations_article_id ON citations(article_id);
