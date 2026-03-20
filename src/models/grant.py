@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 class Grant(BaseModel):
-    id: Optional[int] = None,
+    id: Optional[int] = None
     record_id: str
     grant_id: Optional[str] = None
     agency: str
