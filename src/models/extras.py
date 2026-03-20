@@ -13,8 +13,8 @@ class Keyword(BaseModel):
 class FullText(BaseModel):
     id: Optional[int] = None
     article_id: int
-    availibility: str
-    availibility_code: str
+    availability: str
+    availability_code: str
     document_style: str
     site: str
     url: str
