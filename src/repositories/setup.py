@@ -28,9 +28,15 @@ class DatabaseConnection:
         if not self.pool:
             error_msg = "Database not connected. Call connect() first."
             raise RuntimeError(error_msg)
-        print(self.pool)
         conn = self.pool.getconn()
         try:
             yield conn
         finally:
+            # Ensure any open transaction is cleared before returning connection to pool.
+            # This prevents the pool from logging a rollback for connections left "in transaction".
+            try:
+                conn.rollback()
+            except Exception:
+                # Ignore rollback errors; still attempt to return connection to pool.
+                pass
             self.pool.putconn(conn)
