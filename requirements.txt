@@ -10,7 +10,7 @@ psycopg-binary==3.3.3
 psycopg-pool==3.2.6
 
 # Validation / config
-pydantic==2.12.3
+pydantic==2.12.5
 python-dotenv==1.2.1
 pydantic-settings==2.10.0
 
