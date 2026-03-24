@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from src.models.entities.citations import Citation, Reference
-from src.models.entities.extras import FullText, Grant, Keyword
+from src.models.entities.extras import FullText, Grant
 from src.models.entities.pmc_author import PMCAffiliation, PMCAuthor, ArticleAuthor
 from sqlalchemy import ForeignKey, Integer, String, Text, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
 from .pmc_author import PMCAffiliation, ArticleAuthor
-from .extras import Keyword, Grant, FullText
+from .extras import Grant, FullText
 from .citations import Citation, Reference
 
 class PMCArticle(Base):
@@ -105,10 +105,6 @@ class PMCArticle(Base):
     affiliations: Mapped[List["PMCAffiliation"]] = relationship(
         cascade="all, delete-orphan",
         order_by="PMCAffiliation.affiliation_order"
-    )
-
-    keywords: Mapped[List["Keyword"]] = relationship(
-        cascade="all, delete-orphan"
     )
 
     fulltexts: Mapped[List["FullText"]] = relationship(

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, Body
 from sqlalchemy.orm import Session
 
-from src.models.pmc_article import PMCArticle, PMCArticleFull
+from src.models.pmc_article import PMCArticle, PMCArticleFull, PMCArticleListResponse
 from src.models.pmc_author import PMCAuthor
 from src.models.citation import Citation as CitationModel, CitationList
 from src.services.epmc import EPMCService as EPMCService
@@ -20,11 +20,12 @@ class EPMC:
         self._setup_routes()
 
     def _setup_routes(self):
-        @self.router.get("/epmc/all-articles", response_model=list[PMCArticleFull])
-        async def get_all_articles(limit: int = 1000, skip: int = 0): # to be fixed
+        @self.router.get("/epmc/all-articles", response_model=PMCArticleListResponse)
+        async def get_all_articles(limit: int = 1000, skip: int = 0):
             try:
                 repo = EPMCRepo(self.db)
                 articles = repo.get_all_articles(limit=limit, skip=skip)
+                article_count = repo.get_total_unique_articles_count()
 
                 validated: list[PMCArticleFull] = []
                 for a in articles:
@@ -33,13 +34,10 @@ class EPMC:
                     if isinstance(pt, (list, tuple)):
                         setattr(a, "pub_type", pt[0] if len(pt) > 0 else None)
 
-                    # Set keywords to empty list (table may not exist; prevents lazy-load attempt)
-                    setattr(a, "keywords", [])
-
                     # Convert ORM entity to Pydantic model
                     validated.append(PMCArticleFull.model_validate(a))
 
-                return validated
+                return {"article_count": article_count, "articles": validated}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to fetch articles: {str(e)}")
 

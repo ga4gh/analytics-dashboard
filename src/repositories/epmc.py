@@ -6,7 +6,7 @@ from src.models.entities.pmc_article import PMCArticle, PMCAffiliation
 
 import json
 
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, raiseload
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import func, and_, or_
 from sqlalchemy.sql import literal_column
@@ -14,7 +14,7 @@ from src.config.constants import COUNTRIES, ALIASES
 
 # Reusable ORM entities for cross-table queries
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
-from src.models.entities.extras import FullText, Keyword, Grant
+from src.models.entities.extras import FullText, Grant
 from src.models.entities.citations import Citation, Reference
 from sqlalchemy import func
 from src.models.entities.record import Record
@@ -230,20 +230,44 @@ class EPMCRepo:
     def get_all_articles(self, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         """
         Fetch articles with child relationships loaded, paginated.
+        Returns only the latest version of each unique article (by pm_id).
         """
+        # Create a window function subquery to rank articles by pm_id and ingestion version
+        version_subq = (
+            self.db.query(
+                PMCArticle.id,
+                func.row_number().over(
+                    partition_by=PMCArticle.pm_id,
+                    order_by=Ingestion.version.desc().nullslast()
+                ).label('rn')
+            )
+            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .subquery()
+        )
+        
         return (
             self.db.query(PMCArticle)
+            .join(version_subq, and_(PMCArticle.id == version_subq.c.id, version_subq.c.rn == 1))
             .options(
                 selectinload(PMCArticle.article_authors),
                 selectinload(PMCArticle.affiliations),
                 selectinload(PMCArticle.fulltexts),
                 selectinload(PMCArticle.citations),
                 selectinload(PMCArticle.references),
+
             )
             .offset(skip)
             .limit(limit)
             .all()
-        )      
+        )
+
+    def get_total_unique_articles_count(self) -> int:
+        """
+        Get count of unique articles (by pm_id).
+        Returns the total number of distinct pm_id values in pmc_articles.
+        """
+        count = self.db.query(func.count(func.distinct(PMCArticle.pm_id))).scalar()
+        return int(count) if count else 0
 
     def get_all_grants(self, limit: int = 100, skip: int = 0) -> list[Grant]:
         return self.db.query(Grant).offset(skip).limit(limit).all()

@@ -24,11 +24,11 @@ class PMCCitation(BaseModel):
     id: Optional[int] = None
     article_id: Optional[int] = None
     citation_id: Optional[str] = None  
-    source: str
-    citation_type: str
-    title: str
-    authors: str
-    pub_year: int
+    source: Optional[str] = None
+    citation_type: Optional[str] = None
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    pub_year: Optional[int] = None
     citation_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
@@ -38,11 +38,11 @@ class PMCReference(BaseModel):
     id: Optional[int] = None
     article_id: Optional[int] = None
     reference_id: Optional[str] = None  
-    source: str
-    citation_type: str
-    title: str
-    authors: str
-    pub_year: int
+    source: Optional[str] = None
+    citation_type: Optional[str] = None
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    pub_year: Optional[int] = None
     issn: Optional[str] = None
     essn: Optional[str] = None
     cited_order: Optional[int] = None
@@ -144,10 +144,17 @@ class PMCArticle(BaseModel):
 class PMCArticleFull(PMCArticle):
     authors: List[PMCAuthor] = Field(default_factory=list)
     affiliations: List[PMCAffiliation] = Field(default_factory=list)
-    keywords: List[Keyword] = Field(default_factory=list)
     grants: List[Grant] = Field(default_factory=list)
     fulltexts: List[PMCFullText] = Field(default_factory=list)
     citations: List[PMCCitation] = Field(default_factory=list)
     references: List[PMCReference] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PMCArticleListResponse(BaseModel):
+    """Response model for all-articles endpoint with article count and list."""
+    article_count: int
+    articles: List[PMCArticleFull]
 
     model_config = ConfigDict(from_attributes=True)
