@@ -171,3 +171,6 @@ class EPMCService:
                 counts["references"] += 1
 
         return counts
+    
+    def get_unique_authors_count(self) -> int:
+        return self.epmc_repo.count_unique_authors()

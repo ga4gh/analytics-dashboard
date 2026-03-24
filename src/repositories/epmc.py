@@ -288,10 +288,8 @@ class EPMCRepo:
         return self.db.query(PMCAffiliation).offset(skip).limit(limit).all()
 
     def get_all_articles_ids(self) -> list[tuple[str | None, int]]:
-        return (
-            self.db.query(PMCArticle.pm_id, PMCArticle.record_id)
-            .all()
-        )
+        return  self.db.query(PMCArticle.pm_id, PMCArticle.record_id).all()
+        
 
     def _get_latest_version_subquery(self, entity_class: Type[Any]):
         """
@@ -409,13 +407,21 @@ class EPMCRepo:
         )
         
         # Query entities where row number is 1 (latest version per group)
-        return (
-            self.db.query(entity_class)
-            .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        if entity_class == Citation:
+            return (
+                self.db.query(entity_class)
+                .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
+                .offset(skip)
+                .all()
+            )
+        else:
+            return (
+                self.db.query(entity_class)
+                .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
 
 
     def _get_entities_by_column_value(self, entity_class: Type[Any], column_name: str, value: Any, limit: int = 100, skip: int = 0) -> list[Any]:
@@ -920,3 +926,22 @@ class EPMCRepo:
             List of Citation entities, one per unique citation_id with highest version
         """
         return self._get_latest_entities_by_column(Citation, Citation.citation_id, limit=limit, skip=skip)
+    
+    def count_unique_authors(self) -> int:
+        return self.db.query(
+            func.count(
+                func.distinct(
+                    func.concat(
+                        func.lower(func.trim(PMCAuthor.firstname)),
+                        " ",
+                        func.lower(func.trim(PMCAuthor.lastname)),
+                        " ",
+                        func.lower(func.trim(PMCAuthor.initials))
+                    )
+                )
+            )
+        ).filter(
+            PMCAuthor.firstname.isnot(None),
+            PMCAuthor.lastname.isnot(None),
+            PMCAuthor.initials.isnot(None)
+        ).scalar()

@@ -76,10 +76,8 @@ def main() -> FastAPI:
 
     db_conn = setup.DatabaseConnection(dsn)
     db_conn.connect()
-
     session = SessionLocal()
-
-    logger.info("Database connected via SQLAlchemy ORM")                           
+    logger.info("Database connected via SQLAlchemy ORM")                     
 
     # Fields setup
     record_fields = set(Record.model_fields.keys())

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.models.pmc_article import PMCArticle, PMCArticleFull
 from src.models.pmc_author import PMCAuthor
-from src.models.citation import Citation as CitationModel
+from src.models.citation import Citation as CitationModel, CitationList
 from src.services.epmc import EPMCService as EPMCService
 from src.repositories.epmc import EPMCRepo as EPMCRepo
 from src.services.grant import GrantService as Grant
@@ -138,11 +138,12 @@ class EPMC:
             repo = EPMCRepo(self.db)
             return repo.get_affiliation_countries_count()        
         
-        @self.router.get("/epmc/unique-citations", response_model=list[CitationModel])
+        @self.router.get("/epmc/unique-citations", response_model=CitationList)
         async def get_unique_citations(limit: int = 1000, skip: int = 0):
             repo = EPMCRepo(self.db)
             citations = repo.get_unique_citations(limit=limit, skip=skip)
-            return [CitationModel.model_validate(c) for c in citations]
+            return CitationList(citations=[CitationModel.model_validate(c) for c in citations], citation_count=len(citations))
+
 
         @self.router.get("/epmc/top-authors")
         async def get_top_authors(count: int = 15):
@@ -152,3 +153,11 @@ class EPMC:
                 return repo.get_top_authors(count=count)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to fetch top authors: {e}")
+            
+        @self.router.get("/epmc/unique-authors-count")
+        async def unique_authors_count():
+            repo = EPMCRepo(self.db)
+            service = EPMCService(repo)
+            
+            count = service.get_unique_authors_count()
+            return {"unique_authors": count}    
