@@ -1,4 +1,6 @@
 from typing import List, Dict, Any, Optional
+
+from sqlalchemy import text
 from src.models.github import (
     GithubRepo as GhRepoModel,
     GithubEntity as GhEntityModel,
@@ -74,18 +76,9 @@ class GithubRepo:
             return []
     
     def get_all_repos(self) -> List[GhRepoModel]:
-        query = f"SELECT * FROM github_repos where display_flag is True"
-        with self.db.get_connection() as conn, conn.cursor() as cur:
-            cur.execute(query)
-            rows = cur.fetchall()
-            if rows and cur.description:
-                columns = [desc[0] for desc in cur.description]
-                repos: List[GhRepoModel] = []
-                for row in rows:
-                    data = dict(zip(columns, row, strict=False))
-                    repos.append(GhRepoModel(**data))
-                return repos
-            return []
+        query = text("SELECT * FROM github_repos WHERE display_flag = :flag")
+        result = self.db.execute(query, {"flag": True}).fetchall()
+        return [GhRepoModel(**row) for row in result]
 
 class GithubArchivedStats:
     def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder):
