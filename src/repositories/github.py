@@ -76,9 +76,19 @@ class GithubRepo:
             return []
     
     def get_all_repos(self) -> List[GhRepoModel]:
-        query = text("SELECT * FROM github_repos WHERE display_flag = :flag")
-        result = self.db.execute(query, {"flag": True}).fetchall()
-        return [GhRepoModel(**row) for row in result]
+        query = "SELECT * FROM github_repos WHERE display_flag = %s"
+        with self.db.get_connection() as conn, conn.cursor() as cur:
+            cur.execute(query, (True,))
+            rows = cur.fetchall()
+            if not rows or not cur.description:
+                return []
+
+            columns = [desc[0] for desc in cur.description]
+
+            return [
+                GhRepoModel(**dict(zip(columns, row)))
+                for row in rows
+            ]
 
 class GithubArchivedStats:
     def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder):
