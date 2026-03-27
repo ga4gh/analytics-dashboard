@@ -27,10 +27,10 @@ class GithubRepo(BaseModel):
     updated_at: datetime
     updated_by: str
     version: int
-    created_on: datetime
-    type: str
-    display_flag: bool
-    archived: bool
+    created_on: Optional[datetime] = None
+    type: Optional[str] = None
+    display_flag: Optional[bool] = None
+    archived: Optional[bool] = None
     workstream: Optional[str] = None
     status: Optional[str] = None
 
