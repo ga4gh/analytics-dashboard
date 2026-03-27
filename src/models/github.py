@@ -28,6 +28,11 @@ class GithubRepo(BaseModel):
     updated_by: str
     version: int
     created_on: datetime
+    type: str
+    display_flag: bool
+    archived: bool
+    workstream: Optional[str] = None
+    status: Optional[str] = None
 
 
 class GithubRepoRequest(BaseModel):
@@ -48,7 +53,6 @@ class GithubRepoRequest(BaseModel):
     subscribers_count: int
     branches_count: int
     created_on: datetime
-
 
 class GithubEntity(BaseModel):
     id: Optional[int] = None

@@ -74,7 +74,7 @@ class GithubRepo:
             return []
     
     def get_all_repos(self) -> List[GhRepoModel]:
-        query = f"SELECT * FROM github_repos"
+        query = f"SELECT * FROM github_repos where display_flag is True"
         with self.db.get_connection() as conn, conn.cursor() as cur:
             cur.execute(query)
             rows = cur.fetchall()

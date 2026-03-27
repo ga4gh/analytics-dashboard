@@ -787,9 +787,10 @@ class EPMCRepo:
                 ArticleAuthor.author_id,
                 func.concat(PMCAuthor.firstname, ' ', PMCAuthor.lastname).label('author')
             )
+            .join(PMCArticle, PMCArticle.id == ArticleAuthor.article_id)
             .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
             .group_by(ArticleAuthor.author_id, PMCAuthor.firstname, PMCAuthor.lastname)
-            .order_by(func.count(ArticleAuthor.author_id).desc())
+            .order_by(func.count(ArticleAuthor.author_id).desc(), PMCAuthor.lastname, PMCAuthor.firstname)
             .limit(count)
         )
 
