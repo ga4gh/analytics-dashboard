@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, Body
 from sqlalchemy.orm import Session
+import json
+from datetime import datetime
 
 from src.models.pmc_article import PMCArticle, PMCArticleFull, PMCArticleListResponse
 from src.models.pmc_author import PMCAuthor
@@ -108,13 +110,28 @@ class EPMC:
             repo = EPMCRepo(self.db)
             service = EPMCService(repo)
             grant_service = Grant(repo)
-            result = service.insert_articles_by_keyword("rews", created_by="system", epmc_db=self.db)
-            citations_result = service.insert_citations(created_by="system")
-            references_result = service.insert_references(created_by="system")
-            grant_result = grant_service.create_grants("ga4gh")
 
             try:
-                service.insert_articles_by_keyword(keyword, created_by="system", epmc_db=self.db)
+                result = service.insert_articles_by_keyword(keyword, created_by="system", epmc_db=self.db)
+                citations_result = service.insert_citations(created_by="system")
+                references_result = service.insert_references(created_by="system")
+                grant_result = grant_service.create_grants(keyword)
+
+                # Write a JSON-line entry with ingestion results and timestamp.
+                try:
+                    log_entry = {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "keyword": keyword,
+                        "articles": result,
+                        "citations": citations_result,
+                        "references": references_result,
+                        "grants": grant_result,
+                    }
+                    with open("ingestion_log.txt", "a", encoding="utf-8") as lf:
+                        lf.write(json.dumps(log_entry, default=str) + "\n")
+                except Exception:
+                    # Don't let logging failures break ingestion
+                    pass
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
 

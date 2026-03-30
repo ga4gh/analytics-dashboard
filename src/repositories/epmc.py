@@ -209,18 +209,26 @@ class EPMCRepo:
         )
 
     def update_ingestion_count(self, entity, type):
-        while True:
+        max_attempts = 5
+        attempt = 0
+        while attempt < max_attempts:
+            attempt += 1
             try:
                 entity_id = self.update(entity, type)
                 return entity_id
             except OperationalError as e:
-                print(f"ConnectionError: {e}. Retrying after a timeout...")
+                print(f"ConnectionError on attempt {attempt}/{max_attempts}: {e}")
                 self.db.rollback()
-                time.sleep(5)  
+                if attempt >= max_attempts:
+                    print("Max retry attempts reached, raising OperationalError")
+                    raise
+                # Exponential backoff, capped to 60s
+                backoff = min(60, 2 ** attempt)
+                time.sleep(backoff)
             except Exception as e:
                 print(f"Unexpected error: {e}")
                 self.db.rollback()
-                raise  
+                raise
                 
     def insert_or_update(self, entity, type, update: bool):
         while True:

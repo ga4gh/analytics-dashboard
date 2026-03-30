@@ -19,10 +19,15 @@ class EPMCService:
     def __init__(self, repo: EPMCRepo) -> None:
         self.epmc_repo = repo
         self.epmc_client = EPMCClient()
-        self.articles_records: dict[str, int] = self._load_articles_records()
-        self.highest_versions_by_source_id: dict[str, int] = self._load_versions_by_source_id()
+        # Defer heavy DB loads to avoid blocking startup. These maps will be
+        # populated on first use by calling the loader helpers.
+        self.articles_records: dict[str, int] = {}
+        self.highest_versions_by_source_id: dict[str, int] = {}
         self.ingested_articles: dict[int, int] = {}
-        self.highest_ingestion_version = repo.get_highest_ingestion_version()
+        try:
+            self.highest_ingestion_version = repo.get_highest_ingestion_version()
+        except Exception:
+            self.highest_ingestion_version = 0
         self.ingestion_id = None
 
     def _load_articles_records(self) -> dict[str, int]:
@@ -102,7 +107,9 @@ class EPMCService:
                         counts["authors"] += 1
 
                     # Article_authors
-                    existing_article_author = self.highest_versions_by_source_id.get(f"article_author:{article.get("id")}:{author_id}", 0) > 0        
+                    existing_article_author = self.highest_versions_by_source_id.get(
+                        f"article_author:{article.get('id')}:{author_id}", 0
+                    ) > 0
                            
                     article_author_entity = self.epmc_client.create_article_author(article_id, author_id, author_order, ingestion_id, created_by=created_by)
                     article_author_id = self.epmc_repo.insert_or_update(article_author_entity, ArticleAuthor, existing_article_author)
@@ -121,8 +128,8 @@ class EPMCService:
                             affiliations_seen.add(org_name)
                             aff_order += 1
             
-            ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
-            self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
+            #ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
+            #self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
             self.epmc_repo.commit_to_db()
         except Exception:
             self.epmc_repo.rollback()
