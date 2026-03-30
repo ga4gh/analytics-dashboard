@@ -208,6 +208,20 @@ class EPMCRepo:
             .all()
         )
 
+    def update_ingestion_count(self, entity, type):
+        while True:
+            try:
+                entity_id = self.update(entity, type)
+                return entity_id
+            except OperationalError as e:
+                print(f"ConnectionError: {e}. Retrying after a timeout...")
+                self.db.rollback()
+                time.sleep(5)  
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                self.db.rollback()
+                raise  
+                
     def insert_or_update(self, entity, type, update: bool):
         while True:
             try:

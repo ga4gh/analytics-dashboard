@@ -120,7 +120,9 @@ class EPMCService:
                             counts["affiliations"] += 1
                             affiliations_seen.add(org_name)
                             aff_order += 1
-
+            
+            ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
+            self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
             self.epmc_repo.commit_to_db()
         except Exception:
             self.epmc_repo.rollback()

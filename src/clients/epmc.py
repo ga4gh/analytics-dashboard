@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from pydantic import version
+
 from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
 from src.models.entities.extras import FullText, Grant
@@ -283,7 +285,13 @@ class EPMCClient:
             ingested_at=datetime.utcnow(), 
             created_by=created_by,
             created_at=datetime.utcnow(),
-            version=version,
+            version=version
+        )
+    
+    def update_ingestion(self, ingestion_id, rows_count: int) -> Ingestion:
+        return Ingestion(
+            id=ingestion_id,
+            rows_count=rows_count
         )
 
     def get_articles(self, keyword):
