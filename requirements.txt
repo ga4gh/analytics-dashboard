@@ -22,7 +22,7 @@ httpx==0.28.1
 # Testing
 uvicorn==0.38.0
 pytest==9.0.2
-pytest-cov==7.0.0
+pytest-cov==7.1.0
 
 # Data / viz
 xmltodict==1.0.2
