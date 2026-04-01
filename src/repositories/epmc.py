@@ -974,6 +974,17 @@ class EPMCRepo:
         """
         return self._get_latest_entities_by_column(Citation, Citation.citation_id, limit=limit, skip=skip)
     
+    def get_total_citations_count(self, limit, skip):
+        """
+        Get count of total citations in Europe PMC
+        
+        Args:
+            limit: Maximum number of unique citation_ids to return (default: 100)
+            skip: Number of unique citation_ids to skip for pagination (default: 0)
+        """
+        result: list[Citation] = self.get_unique_citations(limit, skip)
+        return len(result)
+
     def count_unique_authors(self) -> int:
         return self.db.query(
             func.count(
@@ -992,3 +1003,6 @@ class EPMCRepo:
             PMCAuthor.lastname.isnot(None),
             PMCAuthor.initials.isnot(None)
         ).scalar()
+        
+    def count_articles(self) -> int:
+        return 0;

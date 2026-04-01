@@ -183,3 +183,6 @@ class EPMCService:
     
     def get_unique_authors_count(self) -> int:
         return self.epmc_repo.count_unique_authors()
+    
+    def get_articles_count(self) -> int:
+        return self.epmc_repo.count_articles()

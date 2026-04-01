@@ -159,7 +159,6 @@ class EPMC:
             citations = repo.get_unique_citations(limit=limit, skip=skip)
             return CitationList(citations=[CitationModel.model_validate(c) for c in citations], citation_count=len(citations))
 
-
         @self.router.get("/epmc/top-authors")
         async def get_top_authors(count: int = 15):
             """Return top `count` authors ordered by number of article associations."""
@@ -175,4 +174,11 @@ class EPMC:
             service = EPMCService(repo)
             
             count = service.get_unique_authors_count()
-            return {"unique_authors": count}    
+            return {"unique_authors": count}
+        
+        @self.router.get("/epmc/get-articles-count")
+        async def get_articles_count():
+            repo = EPMCRepo(self.db)
+            service = EPMCService(repo)
+            count = service.get_articles_count()
+            return {"articles_count": count} 
