@@ -36,3 +36,11 @@ class Reference(BaseModel):
 class CitationList(BaseModel):
     citations: list[Citation]
     citation_count: int
+    
+class CitationsOverYears(BaseModel):
+    pub_year: int
+    total_citations: int
+
+class TotalCitations(BaseModel):
+    total_citations: int
+    citations_over_years: list[CitationsOverYears]
