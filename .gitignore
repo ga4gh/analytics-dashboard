@@ -14,3 +14,7 @@ flyway.config
 #virutal local env
 /*venv
 /pypi_latest_venv
+
+# QC output data
+qc/data/*
+!qc/data/.gitkeep
