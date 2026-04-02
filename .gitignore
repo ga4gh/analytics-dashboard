@@ -16,5 +16,5 @@ flyway.config
 /pypi_latest_venv
 
 # QC output data
-qc/data/*
-!qc/data/.gitkeep
+qc/*/data/*
+!qc/*/data/.gitkeep

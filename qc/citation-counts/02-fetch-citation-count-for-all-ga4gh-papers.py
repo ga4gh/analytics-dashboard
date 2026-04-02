@@ -4,7 +4,7 @@ import csv
 import os
 
 SEARCH_TERM="GA4GH"
-OUTPUT_HEADER=["id","pmid", "pmcid", "pmid_hit_count", "pmcid_hit_count"]
+OUTPUT_HEADER=["id","source", "hit_count"]
 OUTPUT_FILENAME="ga4gh_related_articles_citation_counts.csv"
 
 def get_next_page_url(response_dict):
@@ -13,30 +13,19 @@ def get_next_page_url(response_dict):
     return None
 
 def process_single_result(result):
-    id = result.get("id", None)
-    pmid = result.get("pmid", None)
-    pmcid = result.get("pmcid", None)
-    pmid_hit_count = 0
-    pmcid_hit_count = 0
+    id = result['id']
+    source = result['source']
+    hit_count = 0
 
-    if pmid:
-        url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/MED/{pmid}/citations?format=json"
-        response = requests.get(url)
-        if response.status_code == 200:
-            pmid_hit_count = response.json().get('hitCount', 0)
-    
-    if pmcid:
-        url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/PMC/{pmcid}/citations?format=json"
-        response = requests.get(url)
-        if response.status_code == 200:
-            pmcid_hit_count = response.json().get('hitCount', 0)
+    url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{source}/{id}/citations?format=json"
+    response = requests.get(url)
+    if response.status_code == 200:
+        hit_count = response.json().get('hitCount', 0)
 
     return {
         "id": id,
-        "pmid": pmid,
-        "pmcid": pmcid,
-        "pmid_hit_count": pmid_hit_count,
-        "pmcid_hit_count": pmcid_hit_count
+        "source": source,
+        "hit_count": hit_count
     }
 
 if __name__ == "__main__":
