@@ -33,14 +33,16 @@ def main():
         driver.get(row['scrape_url'])
 
         try:
-            element = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "impact")))
+            element = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "impact")))
             driver.execute_script("arguments[0].scrollIntoView();", element)
             element.click()
 
-            time.sleep(1)
+            time.sleep(2)
 
             row["scrape_citation_count"] = driver.find_elements(By.CLASS_NAME, "feature-large")[0].text
         except TimeoutException:
+            pass
+        except Exception:
             pass
         finally:
             writer.writerow(row)
