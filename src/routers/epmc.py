@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 import json
 from datetime import datetime
 
-from src.models.pmc_article import PMCArticle, PMCArticleFull, PMCArticleListResponse
+from src.models.pmc_article import PMCArticle, PMCArticleCustom, PMCArticleFull, PMCArticleListCustomResponse, PMCArticleListResponse
 from src.models.pmc_author import PMCAuthor
-from src.models.citation import Citation as CitationModel, CitationList
+from src.models.citation import Citation as CitationModel, CitationList, CitationsOverYears, TotalCitations
 from src.services.epmc import EPMCService as EPMCService
 from src.repositories.epmc import EPMCRepo as EPMCRepo
 from src.services.grant import GrantService as Grant
@@ -22,14 +22,14 @@ class EPMC:
         self._setup_routes()
 
     def _setup_routes(self):
-        @self.router.get("/epmc/all-articles", response_model=PMCArticleListResponse)
+        @self.router.get("/epmc/all-articles", response_model=PMCArticleListCustomResponse)
         async def get_all_articles(limit: int = 1000, skip: int = 0):
             try:
                 repo = EPMCRepo(self.db)
                 articles = repo.get_all_articles(limit=limit, skip=skip)
                 article_count = repo.get_total_unique_articles_count()
 
-                validated: list[PMCArticleFull] = []
+                validated: list[PMCArticleCustom] = []
                 for a in articles:
                     # Normalize pub_type: DB may store arrays or lists; ensure a string for response
                     pt = getattr(a, "pub_type", None)
@@ -37,7 +37,7 @@ class EPMC:
                         setattr(a, "pub_type", pt[0] if len(pt) > 0 else None)
 
                     # Convert ORM entity to Pydantic model
-                    validated.append(PMCArticleFull.model_validate(a))
+                    validated.append(PMCArticleCustom.model_validate(a))
 
                 return {"article_count": article_count, "articles": validated}
             except Exception as e:
@@ -236,3 +236,16 @@ class EPMC:
             service = EPMCService(repo)
             count = service.get_articles_count()
             return {"articles_count": count} 
+
+        @self.router.get("/epmc/citations-over-years", response_model=TotalCitations)
+        async def get_total_citations_count_by_year():
+            repo = EPMCRepo(self.db)
+            service = EPMCService(repo)
+            citations_over_years, total_citations = service.get_total_citations_count_by_year()
+            return TotalCitations(
+                total_citations=total_citations,
+                citations_over_years=[
+                    CitationsOverYears.model_validate(c)
+                    for c in citations_over_years
+                ]
+            )

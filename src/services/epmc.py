@@ -3,6 +3,7 @@ from unittest import skip
 
 from src.clients.epmc import EPMCClient
 
+from src.models.citation import CitationsOverYears
 from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
 from src.models.entities.extras import Grant, FullText, Keyword
@@ -215,3 +216,6 @@ class EPMCService:
     
     def get_articles_count(self) -> int:
         return self.epmc_repo.count_articles()
+    
+    def get_total_citations_count_by_year(self) -> tuple[List[CitationsOverYears], int]:
+        return self.epmc_repo.get_total_citations_count_by_year()
