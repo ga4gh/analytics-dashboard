@@ -112,8 +112,9 @@ class EPMC:
             grant_service = Grant(repo)
 
             try:
+                print("ingesting")
                 result = service.insert_articles_by_keyword(keyword, created_by="system", epmc_db=self.db)
-                citations_result = service.insert_citations(created_by="system")
+                #citations_result = service.insert_citations(created_by="system")
                 references_result = service.insert_references(created_by="system")
                 grant_result = grant_service.create_grants(keyword)
 
@@ -123,7 +124,7 @@ class EPMC:
                         "timestamp": datetime.utcnow().isoformat() + "Z",
                         "keyword": keyword,
                         "articles": result,
-                        "citations": citations_result,
+                        #"citations": citations_result,
                         "references": references_result,
                         "grants": grant_result,
                     }
@@ -137,6 +138,58 @@ class EPMC:
 
             articles = repo.get_all_articles()
             return [PMCArticleFull.model_validate(article) for article in articles]
+
+        @self.router.post("/epmc/ingest-pmc-grants")
+        async def ingest_pmc_grants(keyword: str = Body(..., embed=True)):
+            """Ingest grants from Europe PMC for a given keyword using GrantService.create_grants."""
+            repo = EPMCRepo(self.db)
+            grant_service = Grant(repo)
+
+            try:
+                print("ingesting grants")
+                result = grant_service.create_grants(keyword)
+
+                # Write a JSON-line entry with ingestion results and timestamp.
+                try:
+                    log_entry = {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "keyword": keyword,
+                        "grants": result,
+                    }
+                    with open("ingestion_log.txt", "a", encoding="utf-8") as lf:
+                        lf.write(json.dumps(log_entry, default=str) + "\n")
+                except Exception:
+                    pass
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Grant ingestion failed: {e}")
+
+            return result
+
+        @self.router.post("/epmc/ingest-pmc-references")
+        async def ingest_pmc_references(use_db_articles: bool = True):
+            """Ingest references for all articles in the database using EPMCService.insert_references."""
+            repo = EPMCRepo(self.db)
+            service = EPMCService(repo)
+
+            try:
+                print("ingesting references")
+                result = service.insert_references(created_by="system", use_db_articles=use_db_articles)
+
+                # Write a JSON-line entry with ingestion results and timestamp.
+                try:
+                    log_entry = {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "references": result,
+                        "use_db_articles": use_db_articles,
+                    }
+                    with open("ingestion_log.txt", "a", encoding="utf-8") as lf:
+                        lf.write(json.dumps(log_entry, default=str) + "\n")
+                except Exception:
+                    pass
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Reference ingestion failed: {e}")
+
+            return result
         
         @self.router.get("/epmc/all-latest-entries")
         async def get_all_latest_entries(limit: int = 1000, skip: int = 0):
@@ -157,7 +210,8 @@ class EPMC:
         async def get_unique_citations(limit: int = 1000, skip: int = 0):
             repo = EPMCRepo(self.db)
             citations = repo.get_unique_citations(limit=limit, skip=skip)
-            return CitationList(citations=[CitationModel.model_validate(c) for c in citations], citation_count=len(citations))
+            citation_count = repo.get_total_cited_by_count()
+            return CitationList(citations=[CitationModel.model_validate(c) for c in citations], citation_count=citation_count)
 
         @self.router.get("/epmc/top-authors")
         async def get_top_authors(count: int = 15):

@@ -298,10 +298,29 @@ class EPMCRepo:
         return self.db.query(PMCAuthor).offset(skip).limit(limit).all()
 
     def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
+        # Try resolving as pm_id first
+        try:
+            pm_id_lookup = str(article_id)
+            article = (
+                self.db.query(PMCArticle)
+                .filter(PMCArticle.pm_id == pm_id_lookup)
+                .first()
+            )
+        except Exception:
+            article = None
+
+        if article is not None:
+            internal_id = article.id
+        else:
+            try:
+                internal_id = int(article_id)
+            except Exception:
+                return []
+
         return (
             self.db.query(PMCAuthor)
             .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
-            .filter(ArticleAuthor.article_id == article_id)
+            .filter(ArticleAuthor.article_id == internal_id)
             .order_by(ArticleAuthor.author_order.asc().nullslast())
             .offset(skip)
             .limit(limit)
@@ -960,19 +979,20 @@ class EPMCRepo:
 
     def get_unique_citations(self, limit: int = 100, skip: int = 0) -> list[Citation]:
         """
-        Get unique citations by citation_id with the highest ingestion version.
+        Get unique citations by (article_id, citation_id) pair with the highest ingestion version.
         
-        For each unique citation_id, returns only the Citation entity with the highest ingestion version.
-        If a citation row has no ingestion_id, it is included in the results.
+        For each unique (article_id, citation_id) pair, returns only the Citation entity
+        with the highest ingestion version. If a citation row has no ingestion_id, it is
+        included in the results.
         
         Args:
             limit: Maximum number of unique citations to return (default: 100)
             skip: Number of unique citations to skip for pagination (default: 0)
             
         Returns:
-            List of Citation entities, one per unique citation_id with highest version
+            List of Citation entities, one per unique (article_id, citation_id) pair with highest version
         """
-        return self._get_latest_entities_by_column(Citation, Citation.citation_id, limit=limit, skip=skip)
+        return self._get_latest_entities_by_column(Citation, [Citation.article_id, Citation.citation_id], limit=limit, skip=skip)
     
     def get_total_citations_count(self, limit, skip):
         """
@@ -984,6 +1004,11 @@ class EPMCRepo:
         """
         result: list[Citation] = self.get_unique_citations(limit, skip)
         return len(result)
+
+    def get_total_cited_by_count(self) -> int:
+        """Sum cited_by_count across all articles in pmc_articles."""
+        total = self.db.query(func.sum(PMCArticle.cited_by_count)).scalar()
+        return int(total) if total else 0
 
     def count_unique_authors(self) -> int:
         return self.db.query(
