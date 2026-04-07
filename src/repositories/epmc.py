@@ -273,9 +273,9 @@ class EPMCRepo:
             .options(
                 selectinload(PMCArticle.article_authors),
                 selectinload(PMCArticle.affiliations),
-                selectinload(PMCArticle.fulltexts),
-                selectinload(PMCArticle.citations),
-                selectinload(PMCArticle.references),
+                #selectinload(PMCArticle.fulltexts),
+                #selectinload(PMCArticle.citations),
+                #selectinload(PMCArticle.references),
 
             )
             .offset(skip)

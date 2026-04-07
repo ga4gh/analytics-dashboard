@@ -151,10 +151,23 @@ class PMCArticleFull(PMCArticle):
 
     model_config = ConfigDict(from_attributes=True)
 
+class PMCArticleCustom(PMCArticle):
+    authors: List[PMCAuthor] = Field(default_factory=list)
+    affiliations: List[PMCAffiliation] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class PMCArticleListResponse(BaseModel):
     """Response model for all-articles endpoint with article count and list."""
     article_count: int
     articles: List[PMCArticleFull]
+
+    model_config = ConfigDict(from_attributes=True)
+    
+class PMCArticleListCustomResponse(BaseModel):
+    """Response model for all-articles endpoint with article count and list."""
+    article_count: int
+    articles: List[PMCArticleCustom]
 
     model_config = ConfigDict(from_attributes=True)
