@@ -1,9 +1,9 @@
-from typing import List
+from typing import Counter, List
 from unittest import skip
 
 from src.clients.epmc import EPMCClient
 
-from src.models.citation import CitationsOverYears
+from src.models.citation import CitationOverYears, TotalCitations
 from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
 from src.models.entities.extras import Grant, FullText, Keyword
@@ -217,5 +217,29 @@ class EPMCService:
     def get_articles_count(self) -> int:
         return self.epmc_repo.count_articles()
     
-    def get_total_citations_count_by_year(self) -> tuple[List[CitationsOverYears], int]:
-        return self.epmc_repo.get_total_citations_count_by_year()
+    def get_cumulative_citations(self) -> TotalCitations:
+        CitationList = self.epmc_repo.get_total_citations_count_by_year()
+        
+        year_counts = {}
+        for row in CitationList:
+            pub_year = str(row[0].pub_year)
+            if pub_year not in year_counts:
+                year_counts[pub_year] = 0
+            year_counts[pub_year] += 1
+
+        cumulative = 0
+        citations_over_years = []
+        for year in sorted(year_counts):
+            cumulative += year_counts[year]
+            citations_over_years.append(
+                CitationOverYears(
+                    pub_year=int(year),
+                    year_count=year_counts[year],
+                    commulative_count=cumulative,
+                )
+            )
+
+        return TotalCitations(
+            total_citations=cumulative,
+            citations_over_years=citations_over_years,
+        )

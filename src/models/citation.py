@@ -37,10 +37,11 @@ class CitationList(BaseModel):
     citations: list[Citation]
     citation_count: int
     
-class CitationsOverYears(BaseModel):
+class CitationOverYears(BaseModel):
     pub_year: int
-    total_citations: int
+    year_count: int
+    commulative_count: int
 
 class TotalCitations(BaseModel):
     total_citations: int
-    citations_over_years: list[CitationsOverYears]
+    citations_over_years: list[CitationOverYears]

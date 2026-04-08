@@ -1,7 +1,8 @@
 from datetime import datetime
 import time
-from typing import Any, Optional, Type, List
+from typing import Any, Counter, Optional, Type, List
 
+from src.models.citation import TotalCitations
 from src.models.entities.pmc_article import PMCArticle, PMCAffiliation
 
 import json
@@ -1003,31 +1004,8 @@ class EPMCRepo:
             skip: Number of unique citation_ids to skip for pagination (default: 0)
         """
     def get_total_citations_count_by_year(self) -> tuple[List[dict], int]:
-        # Step 1: grouped query
-        stmt = (
-            select(
-                Citation.pub_year,
-                func.count(Citation.article_id).label("total_citations")
-            )
-            .group_by(Citation.pub_year)
-            .order_by(Citation.pub_year)
-        )
-
-        results = self.db.execute(stmt).all()
-
-        # Step 2: format yearly results
-        citations_over_years = [
-            {
-                "pub_year": row.pub_year,
-                "total_citations": row.total_citations,
-            }
-            for row in results
-        ]
-
-        # Step 3: compute total (no extra query)
-        total_citations = sum(row["total_citations"] for row in citations_over_years)
-
-        return citations_over_years, total_citations
+        stmt = select(Citation).select_from(Citation)
+        return self.db.execute(stmt).all()
 
     def get_total_cited_by_count(self) -> int:
         """Sum cited_by_count across all articles in pmc_articles."""
