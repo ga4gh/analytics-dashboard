@@ -298,7 +298,7 @@ class EPMCRepo:
     def get_all_pmc_authors(self, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
         return self.db.query(PMCAuthor).offset(skip).limit(limit).all()
 
-    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
+    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[tuple[PMCAuthor, Optional[int]]]:
         # Try resolving as pm_id first
         try:
             pm_id_lookup = str(article_id)
@@ -319,7 +319,7 @@ class EPMCRepo:
                 return []
 
         return (
-            self.db.query(PMCAuthor)
+            self.db.query(PMCAuthor, ArticleAuthor.author_order)
             .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
             .filter(ArticleAuthor.article_id == internal_id)
             .order_by(ArticleAuthor.author_order.asc().nullslast())

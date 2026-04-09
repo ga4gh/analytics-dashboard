@@ -59,7 +59,19 @@ class EPMC:
         async def get_authors_by_article_id(article_id: int, limit: int = 1000, skip: int = 0):
             repo = EPMCRepo(self.db)
             service = EPMCService(repo)
-            return repo.get_authors_by_article_id(article_id, limit=limit, skip=skip)
+            author_rows = repo.get_authors_by_article_id(article_id, limit=limit, skip=skip)
+            return [
+                PMCAuthor.model_validate({
+                    "id": author.id,
+                    "fullname": author.fullname,
+                    "firstname": author.firstname,
+                    "lastname": author.lastname,
+                    "initials": author.initials,
+                    "orcid": author.orcid,
+                    "author_order": author_order,
+                })
+                for author, author_order in author_rows
+            ]
 
         @self.router.get("/epmc/get-articles-by-author-id/{author_id}", response_model=list[PMCArticle]) # to be fixed
         async def get_articles_by_author_id(author_id: int, limit: int = 1000, skip: int = 0):
