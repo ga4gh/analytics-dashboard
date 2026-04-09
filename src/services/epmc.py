@@ -73,7 +73,7 @@ class EPMCService:
                 counts["records"] += 1
 
 
-                citation_data = self.epmc_client.get_citations(article.get("id"))
+                citation_data = self.epmc_client.get_citations(article.get("id"), source=article.get("source"))
 
                 # Article
                 print(citation_data.get("hitCount"))
@@ -157,7 +157,7 @@ class EPMCService:
             raise ValueError("Ingestion ID is not set. Please run insert_articles_by_keyword first.")
 
         for article_id in self.ingested_articles:
-            citation_data = self.epmc_client.get_citations(article_id)
+            citation_data = self.epmc_client.get_citations(article_id, source=self.ingested_articles[article_id].get("source"))
             for cite in (citation_data.get("citationList") or {}).get("citation") or []:
                 #existing_citation = self.epmc_repo.get_citation(article_id, cite.get("citation_id")) is not None
                 existing_citation = False
@@ -192,7 +192,7 @@ class EPMCService:
 
         try:
             for pm_id, article_id in article_map.items():
-                response = self.epmc_client.get_references(pm_id)
+                response = self.epmc_client.get_references(pm_id, source=article_map[pm_id].get("source") if use_db_articles else "MED")
                 reference_items = (response.get("referenceList") or {}).get("reference") or []
 
                 if isinstance(reference_items, dict):

@@ -298,12 +298,12 @@ class EPMCClient:
         json_response = self.get_json(self.base_url, self.get_articles_endpoint(keyword))        
         return json_response
 
-    def get_references(self, id):
-        json_response = self.get_json(self.base_url, self.get_references_endpoint(id))
+    def get_references(self, id, source="MED"):
+        json_response = self.get_json(self.base_url, self.get_references_endpoint(id, source=source))
         return json_response
 
-    def get_citations(self, pmcid):
-        json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid))
+    def get_citations(self, pmcid, source="MED"):
+        json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid, source=source))
         return json_response
 
     def get_grants(self, keyword):
@@ -313,11 +313,11 @@ class EPMCClient:
     def get_articles_endpoint(self, keyword):
         return f"search?query={keyword}&format=json&resultType=core"
 
-    def get_citations_endpoint(self, id):
-        return f"MED/{id}/citations?format=json"
+    def get_citations_endpoint(self, id, source="MED"):
+        return f"{source}/{id}/citations?format=json"
 
-    def get_references_endpoint(self, id):
-        return f"MED/{id}/references?format=json"
+    def get_references_endpoint(self, id, source="MED"):
+        return f"{source}/{id}/references?format=json"
 
     def get_grants_endpoint(self, keyword):
         return f"get/query='{keyword}'&resultType=core&format=json"
@@ -327,10 +327,15 @@ class EPMCClient:
         if token:
             headers["Authorization"] = f"token {token}"
 
-        # Start with cursor-based pagination (works for many Europe PMC endpoints).
-        params = {"pageSize": per_page, "cursorMark": "*"}
-        offset = 0
-        use_offset = False
+        is_citations_endpoint = "/citations?" in endpoint
+        page = 1
+
+        # Citations endpoint uses page-based pagination; others use cursor-based pagination.
+        if is_citations_endpoint:
+            params = {"pageSize": per_page, "page": page}
+        else:
+            params = {"pageSize": per_page, "cursorMark": "*"}
+
         items: List[Dict[str, Any]] = []
         url = base_url + endpoint
 
@@ -399,7 +404,7 @@ class EPMCClient:
                 params = {"pageSize": per_page, "cursorMark": next_cursor}
                 continue
 
-            # Fallback: use hitCount + offset pagination when available
+            # Fallback: use hitCount pagination when available
             hit_count = None
             try:
                 hit_count = int(data.get("hitCount") or (data.get(wrapper_key) or {}).get("hitCount"))
@@ -407,11 +412,15 @@ class EPMCClient:
                 hit_count = None
 
             if hit_count is not None:
-                # If we've fetched fewer items than hit_count, advance offset
+                # If we've fetched fewer items than hit_count, advance to next page.
                 if len(items) < hit_count:
-                    use_offset = True
-                    offset += per_page
-                    params = {"pageSize": per_page, "offSet": offset}
+                    if is_citations_endpoint:
+                        page += 1
+                        params = {"pageSize": per_page, "page": page}
+                    else:
+                        # Preserve existing fallback for non-citation endpoints.
+                        next_offset = max(len(items), per_page)
+                        params = {"pageSize": per_page, "offSet": next_offset}
                     continue
 
             # No further pages detected
