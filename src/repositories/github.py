@@ -84,7 +84,7 @@ class GithubRepo:
                 return []
 
             columns = [desc[0] for desc in cur.description]
-
+            print("Type checking:",type(dict(zip(columns, rows[0]))['created_on']))  # check the type
             return [
                 GhRepoModel(**dict(zip(columns, row)))
                 for row in rows
