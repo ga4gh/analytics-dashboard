@@ -7,8 +7,6 @@ on:
   push:
     branches:
       - develop
-      - main # temporary until we get a "develop" branch set up
-      - ci-github-actions # temporary branch for testing, to be removed once workflow is verified
 permissions:
   id-token: write
 jobs:
