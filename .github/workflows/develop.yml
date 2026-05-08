@@ -34,11 +34,11 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: build app docker image
-        id: build-docker-image
+        id: build-app-docker-image
         run: docker build -t ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} -t ${{ env.DOCKER_REPO }}:latest -t ${{ env.DOCKER_REPO }}:develop .
 
       - name: push app image to ecr
-        id: push-to-ecr
+        id: push-app-image-to-ecr
         uses: jwalton/gh-ecr-push@v2
         with:
           region: ${{ secrets.AWS_REGION }}
@@ -46,11 +46,11 @@ jobs:
           image: ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}, ${{ env.DOCKER_REPO }}:latest, ${{ env.DOCKER_REPO }}:develop
 
       - name: build predeploy docker image
-        id: build-docker-image
+        id: build-predeploy-docker-image
         run: docker build -t ${{ env.DOCKER_REPO }}-liquibase:${{ env.DOCKER_TAG }} -t ${{ env.DOCKER_REPO }}-liquibase:latest -t ${{ env.DOCKER_REPO }}-liquibase:develop .
 
       - name: push predeploy image to ecr
-        id: push-to-ecr
+        id: push-predeploy-image-to-ecr
         uses: jwalton/gh-ecr-push@v2
         with:
           region: ${{ secrets.AWS_REGION }}
