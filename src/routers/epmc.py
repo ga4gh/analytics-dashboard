@@ -143,3 +143,12 @@ class EPMC:
             repo = EPMCRepo(self.db)
             citations = repo.get_unique_citations(limit=limit, skip=skip)
             return [CitationModel.model_validate(c) for c in citations]
+
+        @self.router.get("/epmc/top-authors")
+        async def get_top_authors(count: int = 15):
+            """Return top `count` authors ordered by number of article associations."""
+            repo = EPMCRepo(self.db)
+            try:
+                return repo.get_top_authors(count=count)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to fetch top authors: {e}")

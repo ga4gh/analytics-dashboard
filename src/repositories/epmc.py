@@ -741,6 +741,38 @@ class EPMCRepo:
         
         return result
 
+    def get_top_authors(self, count: int = 15) -> list[dict]:
+        """
+        Return the top authors by number of article associations.
+
+        Args:
+            count: number of top rows to return
+
+        Returns:
+            List of dicts with keys: author_count, author_id, author
+        """
+        query = (
+            self.db.query(
+                func.count(ArticleAuthor.author_id).label('author_count'),
+                ArticleAuthor.author_id,
+                func.concat(PMCAuthor.firstname, ' ', PMCAuthor.lastname).label('author')
+            )
+            .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
+            .group_by(ArticleAuthor.author_id, PMCAuthor.firstname, PMCAuthor.lastname)
+            .order_by(func.count(ArticleAuthor.author_id).desc())
+            .limit(count)
+        )
+
+        result: list[dict] = []
+        for author_count, author_id, author in query.all():
+            result.append({
+                'author_count': int(author_count),
+                'author_id': int(author_id),
+                'author': author,
+            })
+
+        return result
+
     def get_unique_references(self, limit: int = 100, skip: int = 0) -> dict[str, int]:
         """
         Get count of references by unique reference_id.
