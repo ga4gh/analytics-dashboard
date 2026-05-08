@@ -47,7 +47,7 @@ jobs:
 
       - name: build predeploy docker image
         id: build-predeploy-docker-image
-        run: docker build -t ${{ env.DOCKER_REPO }}-liquibase:${{ env.DOCKER_TAG }} -t ${{ env.DOCKER_REPO }}-liquibase:latest -t ${{ env.DOCKER_REPO }}-liquibase:develop .
+        run: docker build -t ${{ env.DOCKER_REPO }}-liquibase:${{ env.DOCKER_TAG }} -t ${{ env.DOCKER_REPO }}-liquibase:latest -t ${{ env.DOCKER_REPO }}-liquibase:develop liquibase
 
       - name: push predeploy image to ecr
         id: push-predeploy-image-to-ecr
