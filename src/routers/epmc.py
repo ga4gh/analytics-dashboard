@@ -73,6 +73,12 @@ class EPMC:
                 for author, author_order in author_rows
             ]
 
+        @self.router.get("/epmc/get-affiliations-by-article-id/{pm_id}")
+        async def get_affiliations_by_article_id(pm_id: str, limit: int = 1000, skip: int = 0):
+            repo = EPMCRepo(self.db)
+            service = EPMCService(repo)
+            return repo.get_affiliations_by_article_pm_id(pm_id, limit=limit, skip=skip)
+
         @self.router.get("/epmc/get-articles-by-author-id/{author_id}", response_model=list[PMCArticle]) # to be fixed
         async def get_articles_by_author_id(author_id: int, limit: int = 1000, skip: int = 0):
             repo = EPMCRepo(self.db)

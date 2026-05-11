@@ -328,6 +328,70 @@ class EPMCRepo:
             .all()
         )
 
+    def get_affiliations_by_article_pm_id(self, pm_id: str, limit: int = 100, skip: int = 0) -> list[dict[str, Any]]:
+        """
+        Get affiliations for an article identified by pm_id, ordered by author appearance.
+
+        Ordering is driven by articles_authors.author_order so affiliations align with
+        the same author sequence used by author-related API responses.
+        """
+        article_id_subq = (
+            self.db.query(PMCArticle.id)
+            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .filter(PMCArticle.pm_id == pm_id)
+            .order_by(Ingestion.version.desc().nullslast(), PMCArticle.id.desc())
+            .limit(1)
+            .scalar_subquery()
+        )
+
+        rows = (
+            self.db.query(
+                PMCAffiliation.id,
+                ArticleAuthor.article_id.label("article_id"),
+                ArticleAuthor.author_id.label("author_id"),
+                PMCAffiliation.org_name,
+                PMCAffiliation.affiliation_order,
+                PMCAuthor.firstname,
+                PMCAuthor.lastname,
+                PMCAuthor.fullname,
+                ArticleAuthor.author_order,
+            )
+            .select_from(ArticleAuthor)
+            .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
+            .outerjoin(
+                PMCAffiliation,
+                and_(
+                    PMCAffiliation.article_id == ArticleAuthor.article_id,
+                    PMCAffiliation.author_id == ArticleAuthor.author_id,
+                ),
+            )
+            .filter(ArticleAuthor.article_id == article_id_subq)
+            .order_by(
+                ArticleAuthor.author_order.asc().nullslast(),
+                PMCAffiliation.affiliation_order.asc(),
+                PMCAffiliation.id.asc(),
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "id": row.id,
+                "pm_id": pm_id,
+                "article_id": row.article_id,
+                "author_id": row.author_id,
+                "author_order": row.author_order,
+                "firstname": row.firstname,
+                "lastname": row.lastname,
+                "fullname": row.fullname,
+                "org_name": row.org_name,
+                "affiliation_order": row.affiliation_order,
+            }
+            for row in rows
+        ]
+
     def get_articles_by_author_id(self, author_id: int, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         return (
             self.db.query(PMCArticle)
@@ -994,17 +1058,18 @@ class EPMCRepo:
         """
         return self._get_latest_entities_by_column(Citation, [Citation.article_id, Citation.citation_id], limit=limit, skip=skip)
     
-    def get_total_citations_count_by_year(self, limit, skip):
-        """
-        Get count of total citations in Europe PMC
-        
-        Args:
-            limit: Maximum number of unique citation_ids to return (default: 100)
-            skip: Number of unique citation_ids to skip for pagination (default: 0)
-        """
-    def get_total_citations_count_by_year(self) -> tuple[List[dict], int]:
-        stmt = select(Citation).select_from(Citation)
-        return self.db.execute(stmt).all()
+    def get_total_citations_count_by_year(self) -> list[tuple[int, int]]:
+        """Return yearly citation counts as (pub_year, year_count)."""
+        return (
+            self.db.query(
+                Citation.pub_year,
+                func.count(Citation.id).label("year_count"),
+            )
+            .filter(Citation.pub_year.isnot(None))
+            .group_by(Citation.pub_year)
+            .order_by(Citation.pub_year.asc())
+            .all()
+        )
 
     def get_total_cited_by_count(self) -> int:
         """Sum cited_by_count across all articles in pmc_articles."""

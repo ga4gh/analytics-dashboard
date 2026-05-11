@@ -53,8 +53,6 @@ class EPMCService:
         json_response = self.epmc_client.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
 
-        affiliations_seen: set[str] = set()
-
         ingestion_version = self.highest_ingestion_version + 1
         ingestion_model = self.epmc_client.create_ingestion(ingestion_version, created_by=created_by)
         ingestion_id = self.epmc_repo.insert_or_update(ingestion_model, Ingestion, False)
@@ -133,11 +131,10 @@ class EPMCService:
                     aff_order = 1
                     for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
                         org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
-                        if org_name and org_name not in affiliations_seen:
+                        if org_name:
                             affiliation_entity = self.epmc_client.create_affiliation(aff, author_id, article_id, aff_order, ingestion_id, created_by=created_by)
                             affiliation_id = self.epmc_repo.insert_or_update(affiliation_entity, PMCAffiliation, is_update)
                             counts["affiliations"] += 1
-                            affiliations_seen.add(org_name)
                             aff_order += 1
             
             #ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
@@ -218,23 +215,15 @@ class EPMCService:
         return self.epmc_repo.count_articles()
     
     def get_cumulative_citations(self) -> TotalCitations:
-        CitationList = self.epmc_repo.get_total_citations_count_by_year()
-        
-        year_counts = {}
-        for row in CitationList:
-            pub_year = str(row[0].pub_year)
-            if pub_year not in year_counts:
-                year_counts[pub_year] = 0
-            year_counts[pub_year] += 1
-
+        year_counts = self.epmc_repo.get_total_citations_count_by_year()
         cumulative = 0
         citations_over_years = []
-        for year in sorted(year_counts):
-            cumulative += year_counts[year]
+        for year, year_count in year_counts:
+            cumulative += year_count
             citations_over_years.append(
                 CitationOverYears(
                     pub_year=int(year),
-                    year_count=year_counts[year],
+                    year_count=int(year_count),
                     commulative_count=cumulative,
                 )
             )
