@@ -57,6 +57,9 @@ class EPMCRepo:
     def rollback(self) -> None:
         self.db.rollback()
 
+    def close(self) -> None:
+        self.db.close()
+
     def get_by_id(self, entity_id: int, entity_cls: Type[PMCArticle] = PMCArticle):
         # CHANGE: Return ORM entity (no Pydantic validation).
         return self.db.get(entity_cls, entity_id)
