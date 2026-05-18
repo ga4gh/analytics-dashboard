@@ -181,10 +181,8 @@ class EPMCService:
             #ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
             #self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
             self.epmc_repo.commit_to_db()
-            self.epmc_repo.close()
         except Exception:
             self.epmc_repo.rollback()
-            self.epmc_repo.close()
             raise
         print("full article looped")
         return counts
@@ -208,10 +206,8 @@ class EPMCService:
                     counts["citations"] += 1
 
             self.epmc_repo.commit_to_db()
-            self.epmc_repo.close()
         except Exception:
             self.epmc_repo.rollback()
-            self.epmc_repo.close()
             raise
         return counts
 
@@ -252,10 +248,8 @@ class EPMCService:
                     counts["references"] += 1
 
             self.epmc_repo.commit_to_db()
-            self.epmc_repo.close()
         except Exception:
             self.epmc_repo.rollback()
-            self.epmc_repo.close()
             raise
 
         return counts
