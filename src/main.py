@@ -1,20 +1,15 @@
 # main.py
 # import imp
 import os
-import time
 import logging
 import uvicorn
 from fastapi import FastAPI
 
-from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from urllib.parse import quote
-from sqlalchemy.orm import sessionmaker, Session
 
 # config
 from .config.constants import GH_BASE_URL
-from src.config.session import get_session, SessionLocal
-from src.config.engine import engine
 
 # clients / repos / services / routers
 from .clients.github import GithubRepoClient
@@ -50,13 +45,6 @@ from .services.pubmed import Pubmed as PubmedService
 from .routers.health import router as health_router
 from .routers.epmc import EPMC as EPMCRouter
 
-from contextlib import asynccontextmanager
-
-from src.repositories.epmc import EPMCRepo
-from src.services.epmc import EPMCService
-from src.clients.epmc import EPMCClient
-from src.services.grant import GrantService as Grant
-
 
 def main() -> FastAPI:
     app = FastAPI()
@@ -76,7 +64,7 @@ def main() -> FastAPI:
 
     db_conn = setup.DatabaseConnection(dsn)
     db_conn.connect()
-    session = SessionLocal()
+
     logger.info("Database connected via SQLAlchemy ORM")                     
 
     # Fields setup
@@ -115,9 +103,7 @@ def main() -> FastAPI:
     pypi_router = PypiRouter(pypi_service)
 
     # EPMC setup
-    epmc_repo = EPMCRepo(session)
-    epmc_service = EPMCService(epmc_repo)
-    epmc_router = EPMCRouter(epmc_service, session)
+    epmc_router = EPMCRouter()
 
     # --- FastAPI app + router
     app.include_router(gh_router.router)

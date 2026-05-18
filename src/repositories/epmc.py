@@ -298,21 +298,19 @@ class EPMCRepo:
     def get_all_pmc_authors(self, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
         return self.db.query(PMCAuthor).offset(skip).limit(limit).all()
 
-    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[tuple[PMCAuthor, Optional[int]]]:
-        # Try resolving as pm_id first
-        try:
-            pm_id_lookup = str(article_id)
-            article = (
-                self.db.query(PMCArticle)
-                .filter(PMCArticle.pm_id == pm_id_lookup)
-                .first()
-            )
-        except Exception:
-            article = None
+    def _latest_article_id_by_pm_id(self, pm_id: str) -> Optional[int]:
+        return (
+            self.db.query(PMCArticle.id)
+            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .filter(PMCArticle.pm_id == str(pm_id))
+            .order_by(Ingestion.version.desc().nullslast(), PMCArticle.id.desc())
+            .limit(1)
+            .scalar()
+        )
 
-        if article is not None:
-            internal_id = article.id
-        else:
+    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[tuple[PMCAuthor, Optional[int]]]:
+        internal_id = self._latest_article_id_by_pm_id(str(article_id))
+        if internal_id is None:
             try:
                 internal_id = int(article_id)
             except Exception:
@@ -335,14 +333,9 @@ class EPMCRepo:
         Ordering is driven by articles_authors.author_order so affiliations align with
         the same author sequence used by author-related API responses.
         """
-        article_id_subq = (
-            self.db.query(PMCArticle.id)
-            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
-            .filter(PMCArticle.pm_id == pm_id)
-            .order_by(Ingestion.version.desc().nullslast(), PMCArticle.id.desc())
-            .limit(1)
-            .scalar_subquery()
-        )
+        latest_article_id = self._latest_article_id_by_pm_id(pm_id)
+        if latest_article_id is None:
+            return []
 
         rows = (
             self.db.query(
@@ -365,32 +358,42 @@ class EPMCRepo:
                     PMCAffiliation.author_id == ArticleAuthor.author_id,
                 ),
             )
-            .filter(ArticleAuthor.article_id == article_id_subq)
+            .filter(ArticleAuthor.article_id == latest_article_id)
             .order_by(
                 ArticleAuthor.author_order.asc().nullslast(),
-                PMCAffiliation.affiliation_order.asc(),
-                PMCAffiliation.id.asc(),
+                PMCAffiliation.affiliation_order.asc().nullslast(),
+                PMCAffiliation.id.asc().nullslast(),
             )
-            .offset(skip)
-            .limit(limit)
             .all()
         )
 
-        return [
-            {
-                "id": row.id,
-                "pm_id": pm_id,
-                "article_id": row.article_id,
-                "author_id": row.author_id,
-                "author_order": row.author_order,
-                "firstname": row.firstname,
-                "lastname": row.lastname,
-                "fullname": row.fullname,
-                "org_name": row.org_name,
-                "affiliation_order": row.affiliation_order,
-            }
-            for row in rows
-        ]
+        display_order_by_org: dict[str, int] = {}
+        ordered_rows: list[dict[str, Any]] = []
+        for row in rows:
+            org_name = (row.org_name or "").strip()
+            display_affiliation_order = None
+            if org_name:
+                if org_name not in display_order_by_org:
+                    display_order_by_org[org_name] = len(display_order_by_org) + 1
+                display_affiliation_order = display_order_by_org[org_name]
+
+            ordered_rows.append(
+                {
+                    "id": row.id,
+                    "pm_id": pm_id,
+                    "article_id": row.article_id,
+                    "author_id": row.author_id,
+                    "author_order": row.author_order,
+                    "firstname": row.firstname,
+                    "lastname": row.lastname,
+                    "fullname": row.fullname,
+                    "org_name": org_name or None,
+                    "affiliation_order": row.affiliation_order,
+                    "display_affiliation_order": display_affiliation_order,
+                }
+            )
+
+        return ordered_rows[skip: skip + limit]
 
     def get_articles_by_author_id(self, author_id: int, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         return (

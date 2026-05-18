@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
@@ -11,12 +10,10 @@ SessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-@contextmanager
-def get_session() -> Generator[Session,None,None]:
+def get_session() -> Generator[Session, None, None]:
     session = SessionLocal()
     try:
         yield session
-        session.commit()
     except Exception as e:
         print("Error:", e)
         session.rollback()

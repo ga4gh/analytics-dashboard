@@ -25,11 +25,32 @@ class EPMCService:
         self.articles_records: dict[str, int] = {}
         self.highest_versions_by_source_id: dict[str, int] = {}
         self.ingested_articles: dict[int, int] = {}
-        try:
-            self.highest_ingestion_version = repo.get_highest_ingestion_version()
-        except Exception:
-            self.highest_ingestion_version = 0
         self.ingestion_id = None
+
+    @staticmethod
+    def _as_list(value):
+        if value is None:
+            return []
+        return value if isinstance(value, list) else [value]
+
+    @staticmethod
+    def _positive_int(value):
+        if value is None:
+            return None
+        try:
+            parsed = int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @classmethod
+    def _ordered_value(cls, payload, keys: tuple[str, ...], fallback: int) -> int:
+        if isinstance(payload, dict):
+            for key in keys:
+                parsed = cls._positive_int(payload.get(key))
+                if parsed is not None:
+                    return parsed
+        return fallback
 
     def _load_articles_records(self) -> dict[str, int]:
         article_rows = self.epmc_repo.get_all_articles_ids()
@@ -47,13 +68,19 @@ class EPMCService:
         if not self.highest_versions_by_source_id:
             return []
         return [k for k in self.highest_versions_by_source_id.keys() if k.startswith("fulltext:")]
+
+    def _next_ingestion_version(self) -> int:
+        try:
+            return self.epmc_repo.get_highest_ingestion_version() + 1
+        except Exception:
+            return 1
         
-    def insert_articles_by_keyword(self, keyword: str, created_by: str, epmc_db: str) -> dict[str, int]:
+    def insert_articles_by_keyword(self, keyword: str, created_by: str) -> dict[str, int]:
 
         json_response = self.epmc_client.get_articles(keyword)
         results = json_response.get("resultList", {}).get("result", []) or []
 
-        ingestion_version = self.highest_ingestion_version + 1
+        ingestion_version = self._next_ingestion_version()
         ingestion_model = self.epmc_client.create_ingestion(ingestion_version, created_by=created_by)
         ingestion_id = self.epmc_repo.insert_or_update(ingestion_model, Ingestion, False)
         self.ingestion_id = ingestion_id
@@ -104,8 +131,18 @@ class EPMCService:
                     fulltext_id = self.epmc_repo.insert_or_update(fulltext_entity, FullText, is_update)
                     counts["fulltexts"] += 1
             
-                author_order = 1
-                for author in (article.get("authorList") or {}).get("author") or []:
+                fallback_author_order = 1
+                for author in self._as_list((article.get("authorList") or {}).get("author")):
+                    if not isinstance(author, dict):
+                        continue
+
+                    author_order = self._ordered_value(
+                        author,
+                        ("authorOrder", "author_order", "order"),
+                        fallback_author_order,
+                    )
+                    fallback_author_order += 1
+
                     # Authors
                     existing = self.epmc_repo.get_by_author_name(author.get("fullName"), author.get("firstName"), author.get("lastName"))
                     if existing is None:
@@ -124,18 +161,22 @@ class EPMCService:
                     article_author_entity = self.epmc_client.create_article_author(article_id, author_id, author_order, ingestion_id, created_by=created_by)
                     article_author_id = self.epmc_repo.insert_or_update(article_author_entity, ArticleAuthor, existing_article_author)
                     counts["article_authors"] += 1
-
-                    author_order += 1
                 
                     # Affiliations
-                    aff_order = 1
-                    for aff in (author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation", []) or []:
+                    fallback_affiliation_order = 1
+                    affiliations = self._as_list((author.get("authorAffiliationDetailsList") or {}).get("authorAffiliation"))
+                    for aff in affiliations:
                         org_name = aff.get("affiliation") if isinstance(aff, dict) else aff
                         if org_name:
+                            aff_order = self._ordered_value(
+                                aff,
+                                ("affiliationOrder", "affiliation_order", "authorAffiliationOrder", "order"),
+                                fallback_affiliation_order,
+                            )
                             affiliation_entity = self.epmc_client.create_affiliation(aff, author_id, article_id, aff_order, ingestion_id, created_by=created_by)
                             affiliation_id = self.epmc_repo.insert_or_update(affiliation_entity, PMCAffiliation, is_update)
                             counts["affiliations"] += 1
-                            aff_order += 1
+                            fallback_affiliation_order += 1
             
             #ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
             #self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
@@ -183,7 +224,7 @@ class EPMCService:
 
         # Create ingestion if needed (for new reference records)
         if self.ingestion_id is None:
-            ingestion_version = self.highest_ingestion_version + 1
+            ingestion_version = self._next_ingestion_version()
             ingestion_model = self.epmc_client.create_ingestion(ingestion_version, created_by)
             self.ingestion_id = self.epmc_repo.insert_or_update(ingestion_model, Ingestion, False)
 
