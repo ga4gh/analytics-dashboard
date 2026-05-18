@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime
 import time
 from typing import Any, Counter, Optional, Type, List
+
+logger = logging.getLogger(__name__)
 
 from src.models.citation import TotalCitations
 from src.models.entities.pmc_article import PMCArticle, PMCAffiliation
@@ -20,16 +23,7 @@ from src.models.entities.citations import Citation, Reference
 from sqlalchemy import func
 from src.models.entities.record import Record
 from src.models.entities.ingestion import Ingestion
-# from src.models.grant import Grant
-# from src.models.pmc_article import PMCArticle, PMCAffiliation
-
-
 class EPMCRepo:
-    '''def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
-        self.db = db
-        self.sql_builder = sql_builder
-    '''
-    
     def __init__(self, db: Session):
         
         self.db = db
@@ -221,16 +215,16 @@ class EPMCRepo:
                 entity_id = self.update(entity, type)
                 return entity_id
             except OperationalError as e:
-                print(f"ConnectionError on attempt {attempt}/{max_attempts}: {e}")
+                logger.warning("ConnectionError on attempt %d/%d: %s", attempt, max_attempts, e)
                 self.db.rollback()
                 if attempt >= max_attempts:
-                    print("Max retry attempts reached, raising OperationalError")
+                    logger.error("Max retry attempts reached, raising OperationalError")
                     raise
                 # Exponential backoff, capped to 60s
                 backoff = min(60, 2 ** attempt)
                 time.sleep(backoff)
             except Exception as e:
-                print(f"Unexpected error: {e}")
+                logger.exception("Unexpected error during update_ingestion_count: %s", e)
                 self.db.rollback()
                 raise
                 
@@ -245,13 +239,13 @@ class EPMCRepo:
                 return entity_id
                 #return 1   
             except OperationalError as e:
-                print(f"ConnectionError: {e}. Retrying after a timeout...")
+                logger.warning("ConnectionError: %s. Retrying after a timeout...", e)
                 self.db.rollback()
-                time.sleep(5)  
+                time.sleep(5)
             except Exception as e:
-                print(f"Unexpected error: {e}")
+                logger.exception("Unexpected error during insert_or_update: %s", e)
                 self.db.rollback()
-                raise  
+                raise
 
     def get_all_articles(self, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         """
@@ -751,6 +745,7 @@ class EPMCRepo:
         try:
             return int(max_ver) if max_ver is not None else 0
         except Exception:
+            logger.warning("Could not parse max ingestion version: %r", max_ver)
             return 0
         
     def get_all_latest_entries(self, pm_id: Optional[str] = None, limit: int = 100, skip: int = 0) -> dict[str, list[Any]]:
@@ -1010,7 +1005,7 @@ class EPMCRepo:
                 if country:
                     country_count[country] = country_count.get(country, 0) + 1
             except Exception:
-                # Skip entries that can't be parsed
+                logger.debug("Could not parse country from org_name: %r", org_name)
                 continue
         
         return country_count

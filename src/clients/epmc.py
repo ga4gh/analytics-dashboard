@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from pydantic import version
 
@@ -440,7 +443,7 @@ class EPMCClient:
             path.parent.mkdir(parents=True, exist_ok=True)
 
         df.to_csv(path)
-        print(f"Wrote CSV: {path}")
+        logger.debug("Wrote CSV: %s", path)
         return path
 
 

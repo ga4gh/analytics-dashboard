@@ -1,7 +1,9 @@
+import logging
 from typing import Counter, List
-from unittest import skip
 
 from src.clients.epmc import EPMCClient
+
+logger = logging.getLogger(__name__)
 
 from src.models.citation import CitationOverYears, TotalCitations
 from src.models.entities.pmc_article import PMCArticle
@@ -12,8 +14,6 @@ from src.models.entities.record import Record, RecordType, Source, Status, Produ
 from src.models.entities.ingestion import Ingestion
 
 from src.repositories.epmc import EPMCRepo
-
-#from src.services.grant import Grant
 
 
 class EPMCService:
@@ -73,6 +73,7 @@ class EPMCService:
         try:
             return self.epmc_repo.get_highest_ingestion_version() + 1
         except Exception:
+            logger.warning("Could not fetch highest ingestion version; defaulting to 1")
             return 1
         
     def insert_articles_by_keyword(self, keyword: str, created_by: str) -> dict[str, int]:
@@ -101,7 +102,7 @@ class EPMCService:
                 citation_data = self.epmc_client.get_citations(article.get("id"), source=article.get("source"))
 
                 # Article
-                print(citation_data.get("hitCount"))
+                logger.debug("Citation hitCount for article %s: %s", article.get("id"), citation_data.get("hitCount"))
                 article_entity = self.epmc_client.create_article(article, article_record_id, ingestion_id, created_by=created_by, cited_by=citation_data.get("hitCount", 0))
                 article_id = self.epmc_repo.insert_or_update(article_entity, PMCArticle, is_update)
                 counts["articles"] += 1
@@ -184,7 +185,7 @@ class EPMCService:
         except Exception:
             self.epmc_repo.rollback()
             raise
-        print("full article looped")
+        logger.info("Article ingestion complete: %s", counts)
         return counts
     
     def insert_citations(self, created_by: str):

@@ -1,7 +1,10 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Body
 from sqlalchemy.orm import Session
 import json
-from datetime import datetime
+from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from src.models.pmc_article import PMCArticle, PMCArticleCustom, PMCArticleFull, PMCArticleListCustomResponse
 from src.models.pmc_author import PMCAuthor
@@ -164,7 +167,7 @@ class EPMC:
             grant_service = Grant(repo)
 
             try:
-                print("ingesting")
+                logger.info("Ingesting PMC data for keyword: %s", keyword)
                 result = service.insert_articles_by_keyword(keyword, created_by="system")
                 #citations_result = service.insert_citations(created_by="system")
                 references_result = service.insert_references(created_by="system")
@@ -173,7 +176,7 @@ class EPMC:
                 # Write a JSON-line entry with ingestion results and timestamp.
                 try:
                     log_entry = {
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "keyword": keyword,
                         "articles": result,
                         #"citations": citations_result,
@@ -200,13 +203,13 @@ class EPMC:
             grant_service = Grant(repo)
 
             try:
-                print("ingesting grants")
+                logger.info("Ingesting PMC grants for keyword: %s", keyword)
                 result = grant_service.create_grants(keyword)
 
                 # Write a JSON-line entry with ingestion results and timestamp.
                 try:
                     log_entry = {
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "keyword": keyword,
                         "grants": result,
                     }
@@ -228,13 +231,13 @@ class EPMC:
             service = EPMCService(repo)
 
             try:
-                print("ingesting references")
+                logger.info("Ingesting PMC references (use_db_articles=%s)", use_db_articles)
                 result = service.insert_references(created_by="system", use_db_articles=use_db_articles)
 
                 # Write a JSON-line entry with ingestion results and timestamp.
                 try:
                     log_entry = {
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "references": result,
                         "use_db_articles": use_db_articles,
                     }

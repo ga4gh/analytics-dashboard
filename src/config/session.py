@@ -1,7 +1,10 @@
+import logging
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
 from .engine import engine
+
+logger = logging.getLogger(__name__)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -15,7 +18,7 @@ def get_session() -> Generator[Session, None, None]:
     try:
         yield session
     except Exception as e:
-        print("Error:", e)
+        logger.exception("Session error: %s", e)
         session.rollback()
         raise
     finally:
