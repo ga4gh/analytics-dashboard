@@ -181,8 +181,10 @@ class EPMCService:
             #ingestion_model = self.epmc_client.update_ingestion(self.ingestion_id, counts["articles"])    
             #self.epmc_repo.update_ingestion_count(ingestion_model, Ingestion) 
             self.epmc_repo.commit_to_db()
+            self.epmc_repo.close()
         except Exception:
             self.epmc_repo.rollback()
+            self.epmc_repo.close()
             raise
         print("full article looped")
         return counts
@@ -190,20 +192,27 @@ class EPMCService:
     def insert_citations(self, created_by: str):
         
         counts = {"citations": 0}
+        try:
+            if self.ingestion_id is None:
+                raise ValueError("Ingestion ID is not set. Please run insert_articles_by_keyword first.")
 
-        if self.ingestion_id is None:
-            raise ValueError("Ingestion ID is not set. Please run insert_articles_by_keyword first.")
+            for article_id in self.ingested_articles:
+                citation_data = self.epmc_client.get_citations(article_id, source=self.ingested_articles[article_id].get("source"))
+                for cite in (citation_data.get("citationList") or {}).get("citation") or []:
+                    #existing_citation = self.epmc_repo.get_citation(article_id, cite.get("citation_id")) is not None
+                    existing_citation = False
 
-        for article_id in self.ingested_articles:
-            citation_data = self.epmc_client.get_citations(article_id, source=self.ingested_articles[article_id].get("source"))
-            for cite in (citation_data.get("citationList") or {}).get("citation") or []:
-                #existing_citation = self.epmc_repo.get_citation(article_id, cite.get("citation_id")) is not None
-                existing_citation = False
+                    # Citation
+                    citation_entity = self.epmc_client.create_citation(cite, self.ingested_articles[article_id], self.ingestion_id, created_by=created_by)
+                    citation_id = self.epmc_repo.insert_or_update(citation_entity, Citation, existing_citation)
+                    counts["citations"] += 1
 
-                # Citation
-                citation_entity = self.epmc_client.create_citation(cite, self.ingested_articles[article_id], self.ingestion_id, created_by=created_by)
-                citation_id = self.epmc_repo.insert_or_update(citation_entity, Citation, existing_citation)
-                counts["citations"] += 1
+            self.epmc_repo.commit_to_db()
+            self.epmc_repo.close()
+        except Exception:
+            self.epmc_repo.rollback()
+            self.epmc_repo.close()
+            raise
         return counts
 
     def insert_references(self, created_by: str, use_db_articles: bool = False):
@@ -243,8 +252,10 @@ class EPMCService:
                     counts["references"] += 1
 
             self.epmc_repo.commit_to_db()
+            self.epmc_repo.close()
         except Exception:
             self.epmc_repo.rollback()
+            self.epmc_repo.close()
             raise
 
         return counts
