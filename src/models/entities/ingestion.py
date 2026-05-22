@@ -18,6 +18,7 @@ class Ingestion(Base):
         TIMESTAMP(timezone=True),
         nullable=False,
     )
+    rows_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # ---------- Audit ----------
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -26,3 +27,4 @@ class Ingestion(Base):
         nullable=False,
     )
     version: Mapped[int] = mapped_column(Integer, default=1)
+    

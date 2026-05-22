@@ -32,3 +32,16 @@ class Reference(BaseModel):
     match: bool
 
     model_config = {"from_attributes": True}
+    
+class CitationList(BaseModel):
+    citations: list[Citation]
+    citation_count: int
+    
+class CitationOverYears(BaseModel):
+    pub_year: int
+    year_count: int
+    commulative_count: int
+
+class TotalCitations(BaseModel):
+    total_citations: int
+    citations_over_years: list[CitationOverYears]

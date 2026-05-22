@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS fulltexts (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
-    ingestion_id INTEGER NOT NULL,
+    ingestion_id INTEGER,
     availability VARCHAR(64),
     availability_code VARCHAR(32),
     document_style VARCHAR(32),
@@ -17,7 +17,11 @@ CREATE TABLE IF NOT EXISTS fulltexts (
     CONSTRAINT fk_fulltexts_article
       FOREIGN KEY (article_id)
       REFERENCES pmc_articles (id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    CONSTRAINT fk_fulltexts_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_fulltexts_article_id ON fulltexts(article_id);

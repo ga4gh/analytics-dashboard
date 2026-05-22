@@ -1,3 +1,5 @@
+import logging
+
 from src.models.pypi import (
     ReleasesByYearResponse,
     ReleasesByYearItem,
@@ -14,6 +16,8 @@ from src.models.pypi import (
 from .setup import DatabaseConnection
 from .sqlbuilder import SQLBuilder
 from psycopg.rows import dict_row
+
+logger = logging.getLogger(__name__)
 
 
 class Pypi:
@@ -97,8 +101,8 @@ class Pypi:
                         coverage_percent=float(percent or 0.0)
                     ))
         response = SourcesCoverageResponse(coverages=items)
-        print(response)
-        return SourcesCoverageResponse(coverages=items)
+        logger.debug("Sources coverage response: %s", response)
+        return response
     
     def get_project_details(self) -> list[PypiDetails]:
         """

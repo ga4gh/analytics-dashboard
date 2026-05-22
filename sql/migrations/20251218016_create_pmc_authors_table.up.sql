@@ -1,19 +1,22 @@
 CREATE TABLE IF NOT EXISTS pmc_authors (
     id SERIAL PRIMARY KEY,
-    ingestion_id INTEGER NOT NULL,
+    ingestion_id INTEGER,
     fullname TEXT NOT NULL,
     firstname VARCHAR(128),
     lastname VARCHAR(128),
     initials VARCHAR(32),
     orcid VARCHAR(64),
-    author_order INTEGER NOT NULL,
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by VARCHAR(64),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_by VARCHAR(64),
     deleted_at TIMESTAMPTZ,
-    version INTEGER NOT NULL DEFAULT 1
+    version INTEGER NOT NULL DEFAULT 1,
+    CONSTRAINT fk_pmc_authors_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_pmc_authors_lastname ON pmc_authors(lastname);

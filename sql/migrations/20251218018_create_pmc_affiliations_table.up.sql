@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS pmc_affiliations (
     id SERIAL PRIMARY KEY,
     author_id INTEGER NOT NULL,
-    ingestion_id INTEGER NOT NULL,
+    ingestion_id INTEGER,
     org_name TEXT,
     article_id INTEGER NOT NULL,
     affiliation_order INTEGER NOT NULL,
@@ -14,12 +14,16 @@ CREATE TABLE IF NOT EXISTS pmc_affiliations (
     version INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT fk_affiliations_author
       FOREIGN KEY (author_id)
-      REFERENCES authors (id)
+      REFERENCES pmc_authors (id)
       ON DELETE CASCADE,
-    CONSTRAINT fk_articles
+    CONSTRAINT fk_pmc_affiliations_article
       FOREIGN KEY (article_id)
       REFERENCES pmc_articles (id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    CONSTRAINT fk_pmc_affiliations_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_affiliations_author_id ON pmc_affiliations(author_id);

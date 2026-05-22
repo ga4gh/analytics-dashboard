@@ -1,61 +1,38 @@
-# main.py
-# import imp
-import os
-import time
 import logging
+import os
+
 import uvicorn
 from fastapi import FastAPI
-
-from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from urllib.parse import quote
-from sqlalchemy.orm import sessionmaker, Session
-
-# config
-from .config.constants import GH_BASE_URL
-from src.config.session import get_session, SessionLocal
-from src.config.engine import engine
-
-# clients / repos / services / routers
-from .clients.github import GithubRepoClient
-from .repositories.github import GithubRepo as GithubRepoRepository
-from .repositories import setup
-from .services.github import GithubRepos as GithubReposService
-from .routers.github import GithubRepoRouter
-from .models.github import GithubRepo
-
-from src.repositories.record import Record as RecordRepo
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-from .repositories import setup, sqlbuilder
-from .routers.pypi import Pypi as PypiRouter
-from .services.pypi import Pypi as PypiService
-from .repositories.pypi import Pypi as PypiRepo
-from .models.pypi import Pypi as PypiModel
 
 from .clients import pubmed
+from .clients.github import GithubRepoClient
 from .config import constants
 from .config.config import config
+from .config.constants import GH_BASE_URL
 from .models.article import Article
 from .models.author import Author
+from .models.github import GithubRepo
+from .models.pypi import Pypi as PypiModel
 from .models.record import Record
 from .repositories import setup, sqlbuilder
 from .repositories.article import Article as ArticleRepo
 from .repositories.author import Author as AuthorRepo
+from .repositories.github import GithubRepo as GithubRepoRepository
+from .repositories.pypi import Pypi as PypiRepo
 from .repositories.record import Record as RecordRepo
-from .routers.pubmed import Pubmed as PubmedRouter
-from .services.pubmed import Pubmed as PubmedService
-
-from .routers.health import router as health_router
 from .routers.epmc import EPMC as EPMCRouter
+from .routers.github import GithubRepoRouter
+from .routers.health import router as health_router
+from .routers.pubmed import Pubmed as PubmedRouter
+from .routers.pypi import Pypi as PypiRouter
+from .services.github import GithubRepos as GithubReposService
+from .services.pubmed import Pubmed as PubmedService
+from .services.pypi import Pypi as PypiService
 
-from contextlib import asynccontextmanager
-
-from src.repositories.epmc import EPMCRepo
-from src.services.epmc import EPMCService
-from src.clients.epmc import EPMCClient
-from src.services.grant import GrantService as Grant
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def main() -> FastAPI:
@@ -77,9 +54,7 @@ def main() -> FastAPI:
     db_conn = setup.DatabaseConnection(dsn)
     db_conn.connect()
 
-    session = SessionLocal()
-
-    logger.info("Database connected via SQLAlchemy ORM")                           
+    logger.info("Database connected via SQLAlchemy ORM")                     
 
     # Fields setup
     record_fields = set(Record.model_fields.keys())
@@ -117,9 +92,7 @@ def main() -> FastAPI:
     pypi_router = PypiRouter(pypi_service)
 
     # EPMC setup
-    epmc_repo = EPMCRepo(session)
-    epmc_service = EPMCService(epmc_repo)
-    epmc_router = EPMCRouter(epmc_service, session)
+    epmc_router = EPMCRouter()
 
     # --- FastAPI app + router
     app.include_router(gh_router.router)

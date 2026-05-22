@@ -11,6 +11,7 @@ class PMCAuthor(BaseModel):
     lastname: Optional[str] = None
     initials: Optional[str] = None
     orcid: Optional[str] = None
+    author_order: Optional[int] = None
 
     model_config = {"from_attributes": True}
     

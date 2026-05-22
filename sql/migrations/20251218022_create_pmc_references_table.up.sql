@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS pmc_references (
     id SERIAL PRIMARY KEY,
     article_id INTEGER NOT NULL,
-    ingestion_id INTEGER NOT NULL,
+    ingestion_id INTEGER,
     reference_id VARCHAR(128),
     source VARCHAR(64),
     citation_type VARCHAR(64),
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS pmc_references (
     issn VARCHAR(32),
     essn VARCHAR(32),
     cited_order INTEGER,
-    match BOOLEAN,
+    match VARCHAR(8),
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by VARCHAR(64),
@@ -22,7 +22,11 @@ CREATE TABLE IF NOT EXISTS pmc_references (
     CONSTRAINT fk_references_article
       FOREIGN KEY (article_id)
       REFERENCES pmc_articles (id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    CONSTRAINT fk_references_ingestion
+      FOREIGN KEY (ingestion_id)
+      REFERENCES ingestion (id)
+      ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_references_article_id ON pmc_references(article_id);
