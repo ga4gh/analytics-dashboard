@@ -1,9 +1,0 @@
-DROP TRIGGER IF EXISTS trg_audit_affiliations ON public.affiliations;
-DROP FUNCTION IF EXISTS affiliations_audit_trigger_func;
-DROP TABLE IF EXISTS affiliations_audit;
-DROP INDEX IF EXISTS idx_affiliations_audit_affiliations_id;
-DROP INDEX IF EXISTS idx_affiliations_audit_action_tstamp;
-DROP INDEX IF EXISTS idx_affiliations_author_id;
-DROP INDEX IF EXISTS idx_affiliations_institute;
-DROP INDEX IF EXISTS idx_affiliations_location;
-DROP TABLE IF EXISTS affiliations;

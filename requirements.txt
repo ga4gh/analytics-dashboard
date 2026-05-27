@@ -3,14 +3,14 @@ fastapi==0.124.0
 uvicorn==0.38.0
 
 # Database
-sqlalchemy==2.0.36
+sqlalchemy==2.0.48
 alembic==1.13.3
 psycopg==3.3.2
-psycopg-binary==3.3.2
+psycopg-binary==3.3.3
 psycopg-pool==3.2.6
 
 # Validation / config
-pydantic==2.12.3
+pydantic==2.12.5
 python-dotenv==1.2.1
 pydantic-settings==2.10.0
 
@@ -26,8 +26,8 @@ pytest-cov==7.0.0
 
 # Data / viz
 xmltodict==1.0.2
-matplotlib==3.9.2
+matplotlib==3.10.8
 pandas==2.3.3
 seaborn==0.13.2
-dash==2.18.1
+dash==4.0.0
 plotly==5.24.1
