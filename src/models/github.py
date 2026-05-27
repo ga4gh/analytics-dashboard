@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 
 
@@ -27,7 +27,20 @@ class GithubRepo(BaseModel):
     updated_at: datetime
     updated_by: str
     version: int
-    created_on: datetime
+    created_on: Optional[datetime] = None
+    type: Optional[str] = None
+    display_flag: Optional[bool] = None
+    archived: Optional[bool] = None
+    workstream: Optional[str] = None
+    status: Optional[str] = None
+    
+    @field_validator('created_on', mode='before')
+    @classmethod
+    def parse_created_on(cls, v):
+        if isinstance(v, str):
+            from dateutil import parser
+            return parser.parse(v)
+        return v
 
 
 class GithubRepoRequest(BaseModel):
@@ -48,7 +61,6 @@ class GithubRepoRequest(BaseModel):
     subscribers_count: int
     branches_count: int
     created_on: datetime
-
 
 class GithubEntity(BaseModel):
     id: Optional[int] = None

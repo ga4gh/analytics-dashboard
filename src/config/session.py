@@ -1,8 +1,10 @@
-from contextlib import contextmanager
+import logging
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
 from .engine import engine
+
+logger = logging.getLogger(__name__)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -11,13 +13,12 @@ SessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-@contextmanager
-def get_session() -> Generator[Session,None,None]:
+def get_session() -> Generator[Session, None, None]:
     session = SessionLocal()
     try:
         yield session
-        session.commit()
-    except Exception:
+    except Exception as e:
+        logger.exception("Session error: %s", e)
         session.rollback()
         raise
     finally:

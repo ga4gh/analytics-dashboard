@@ -1,34 +1,29 @@
+import logging
 from datetime import datetime
 import time
-from typing import Any, Optional, Type, List
+from typing import Any, Counter, Optional, Type, List
 
+logger = logging.getLogger(__name__)
+
+from src.models.citation import TotalCitations
 from src.models.entities.pmc_article import PMCArticle, PMCAffiliation
 
 import json
 
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, raiseload
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, select
 from sqlalchemy.sql import literal_column
 from src.config.constants import COUNTRIES, ALIASES
 
 # Reusable ORM entities for cross-table queries
 from src.models.entities.pmc_author import PMCAuthor, ArticleAuthor
-from src.models.entities.extras import FullText, Keyword, Grant
+from src.models.entities.extras import FullText, Grant
 from src.models.entities.citations import Citation, Reference
 from sqlalchemy import func
 from src.models.entities.record import Record
 from src.models.entities.ingestion import Ingestion
-# from src.models.grant import Grant
-# from src.models.pmc_article import PMCArticle, PMCAffiliation
-
-
 class EPMCRepo:
-    '''def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder) -> None:
-        self.db = db
-        self.sql_builder = sql_builder
-    '''
-    
     def __init__(self, db: Session):
         
         self.db = db
@@ -55,6 +50,9 @@ class EPMCRepo:
 
     def rollback(self) -> None:
         self.db.rollback()
+
+    def close(self) -> None:
+        self.db.close()
 
     def get_by_id(self, entity_id: int, entity_cls: Type[PMCArticle] = PMCArticle):
         # CHANGE: Return ORM entity (no Pydantic validation).
@@ -208,6 +206,28 @@ class EPMCRepo:
             .all()
         )
 
+    def update_ingestion_count(self, entity, type):
+        max_attempts = 5
+        attempt = 0
+        while attempt < max_attempts:
+            attempt += 1
+            try:
+                entity_id = self.update(entity, type)
+                return entity_id
+            except OperationalError as e:
+                logger.warning("ConnectionError on attempt %d/%d: %s", attempt, max_attempts, e)
+                self.db.rollback()
+                if attempt >= max_attempts:
+                    logger.error("Max retry attempts reached, raising OperationalError")
+                    raise
+                # Exponential backoff, capped to 60s
+                backoff = min(60, 2 ** attempt)
+                time.sleep(backoff)
+            except Exception as e:
+                logger.exception("Unexpected error during update_ingestion_count: %s", e)
+                self.db.rollback()
+                raise
+                
     def insert_or_update(self, entity, type, update: bool):
         while True:
             try:
@@ -219,31 +239,55 @@ class EPMCRepo:
                 return entity_id
                 #return 1   
             except OperationalError as e:
-                print(f"ConnectionError: {e}. Retrying after a timeout...")
+                logger.warning("ConnectionError: %s. Retrying after a timeout...", e)
                 self.db.rollback()
-                time.sleep(5)  
+                time.sleep(5)
             except Exception as e:
-                print(f"Unexpected error: {e}")
+                logger.exception("Unexpected error during insert_or_update: %s", e)
                 self.db.rollback()
-                raise  
+                raise
 
     def get_all_articles(self, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         """
         Fetch articles with child relationships loaded, paginated.
+        Returns only the latest version of each unique article (by pm_id).
         """
+        # Create a window function subquery to rank articles by pm_id and ingestion version
+        version_subq = (
+            self.db.query(
+                PMCArticle.id,
+                func.row_number().over(
+                    partition_by=PMCArticle.pm_id,
+                    order_by=Ingestion.version.desc().nullslast()
+                ).label('rn')
+            )
+            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .subquery()
+        )
+        
         return (
             self.db.query(PMCArticle)
+            .join(version_subq, and_(PMCArticle.id == version_subq.c.id, version_subq.c.rn == 1))
             .options(
                 selectinload(PMCArticle.article_authors),
                 selectinload(PMCArticle.affiliations),
-                selectinload(PMCArticle.fulltexts),
-                selectinload(PMCArticle.citations),
-                selectinload(PMCArticle.references),
+                #selectinload(PMCArticle.fulltexts),
+                #selectinload(PMCArticle.citations),
+                #selectinload(PMCArticle.references),
+
             )
             .offset(skip)
             .limit(limit)
             .all()
-        )      
+        )
+
+    def get_total_unique_articles_count(self) -> int:
+        """
+        Get count of unique articles (by pm_id).
+        Returns the total number of distinct pm_id values in pmc_articles.
+        """
+        count = self.db.query(func.count(func.distinct(PMCArticle.pm_id))).scalar()
+        return int(count) if count else 0
 
     def get_all_grants(self, limit: int = 100, skip: int = 0) -> list[Grant]:
         return self.db.query(Grant).offset(skip).limit(limit).all()
@@ -251,16 +295,102 @@ class EPMCRepo:
     def get_all_pmc_authors(self, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
         return self.db.query(PMCAuthor).offset(skip).limit(limit).all()
 
-    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[PMCAuthor]:
+    def _latest_article_id_by_pm_id(self, pm_id: str) -> Optional[int]:
         return (
-            self.db.query(PMCAuthor)
+            self.db.query(PMCArticle.id)
+            .outerjoin(Ingestion, PMCArticle.ingestion_id == Ingestion.id)
+            .filter(PMCArticle.pm_id == str(pm_id))
+            .order_by(Ingestion.version.desc().nullslast(), PMCArticle.id.desc())
+            .limit(1)
+            .scalar()
+        )
+
+    def get_authors_by_article_id(self, article_id: int, limit: int = 100, skip: int = 0) -> list[tuple[PMCAuthor, Optional[int]]]:
+        internal_id = self._latest_article_id_by_pm_id(str(article_id))
+        if internal_id is None:
+            try:
+                internal_id = int(article_id)
+            except Exception:
+                return []
+
+        return (
+            self.db.query(PMCAuthor, ArticleAuthor.author_order)
             .join(ArticleAuthor, ArticleAuthor.author_id == PMCAuthor.id)
-            .filter(ArticleAuthor.article_id == article_id)
+            .filter(ArticleAuthor.article_id == internal_id)
             .order_by(ArticleAuthor.author_order.asc().nullslast())
             .offset(skip)
             .limit(limit)
             .all()
         )
+
+    def get_affiliations_by_article_pm_id(self, pm_id: str, limit: int = 100, skip: int = 0) -> list[dict[str, Any]]:
+        """
+        Get affiliations for an article identified by pm_id, ordered by author appearance.
+
+        Ordering is driven by articles_authors.author_order so affiliations align with
+        the same author sequence used by author-related API responses.
+        """
+        latest_article_id = self._latest_article_id_by_pm_id(pm_id)
+        if latest_article_id is None:
+            return []
+
+        rows = (
+            self.db.query(
+                PMCAffiliation.id,
+                ArticleAuthor.article_id.label("article_id"),
+                ArticleAuthor.author_id.label("author_id"),
+                PMCAffiliation.org_name,
+                PMCAffiliation.affiliation_order,
+                PMCAuthor.firstname,
+                PMCAuthor.lastname,
+                PMCAuthor.fullname,
+                ArticleAuthor.author_order,
+            )
+            .select_from(ArticleAuthor)
+            .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
+            .outerjoin(
+                PMCAffiliation,
+                and_(
+                    PMCAffiliation.article_id == ArticleAuthor.article_id,
+                    PMCAffiliation.author_id == ArticleAuthor.author_id,
+                ),
+            )
+            .filter(ArticleAuthor.article_id == latest_article_id)
+            .order_by(
+                ArticleAuthor.author_order.asc().nullslast(),
+                PMCAffiliation.affiliation_order.asc().nullslast(),
+                PMCAffiliation.id.asc().nullslast(),
+            )
+            .all()
+        )
+
+        display_order_by_org: dict[str, int] = {}
+        ordered_rows: list[dict[str, Any]] = []
+        for row in rows:
+            org_name = (row.org_name or "").strip()
+            display_affiliation_order = None
+            if org_name:
+                if org_name not in display_order_by_org:
+                    display_order_by_org[org_name] = len(display_order_by_org) + 1
+                display_affiliation_order = display_order_by_org[org_name]
+
+            ordered_rows.append(
+                {
+                    "id": row.id,
+                    "pm_id": pm_id,
+                    "article_id": row.article_id,
+                    "author_id": row.author_id,
+                    "author_order": row.author_order,
+                    "firstname": row.firstname,
+                    "lastname": row.lastname,
+                    "fullname": row.fullname,
+                    "org_name": org_name or None,
+                    "affiliation_order": row.affiliation_order,
+                    "display_affiliation_order": display_affiliation_order,
+                }
+            )
+
+        return ordered_rows[skip: skip + limit]
 
     def get_articles_by_author_id(self, author_id: int, limit: int = 100, skip: int = 0) -> list[PMCArticle]:
         return (
@@ -288,10 +418,8 @@ class EPMCRepo:
         return self.db.query(PMCAffiliation).offset(skip).limit(limit).all()
 
     def get_all_articles_ids(self) -> list[tuple[str | None, int]]:
-        return (
-            self.db.query(PMCArticle.pm_id, PMCArticle.record_id)
-            .all()
-        )
+        return  self.db.query(PMCArticle.pm_id, PMCArticle.record_id).all()
+        
 
     def _get_latest_version_subquery(self, entity_class: Type[Any]):
         """
@@ -409,13 +537,21 @@ class EPMCRepo:
         )
         
         # Query entities where row number is 1 (latest version per group)
-        return (
-            self.db.query(entity_class)
-            .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        if entity_class == Citation:
+            return (
+                self.db.query(entity_class)
+                .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
+                .offset(skip)
+                .all()
+            )
+        else:
+            return (
+                self.db.query(entity_class)
+                .join(version_subq, and_(entity_class.id == version_subq.c.id, version_subq.c.rn == 1))
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
 
 
     def _get_entities_by_column_value(self, entity_class: Type[Any], column_name: str, value: Any, limit: int = 100, skip: int = 0) -> list[Any]:
@@ -609,6 +745,7 @@ class EPMCRepo:
         try:
             return int(max_ver) if max_ver is not None else 0
         except Exception:
+            logger.warning("Could not parse max ingestion version: %r", max_ver)
             return 0
         
     def get_all_latest_entries(self, pm_id: Optional[str] = None, limit: int = 100, skip: int = 0) -> dict[str, list[Any]]:
@@ -757,10 +894,10 @@ class EPMCRepo:
                 ArticleAuthor.author_id,
                 func.concat(PMCAuthor.firstname, ' ', PMCAuthor.lastname).label('author')
             )
+            .join(PMCArticle, PMCArticle.id == ArticleAuthor.article_id)
             .join(PMCAuthor, PMCAuthor.id == ArticleAuthor.author_id)
             .group_by(ArticleAuthor.author_id, PMCAuthor.firstname, PMCAuthor.lastname)
-            .order_by(func.count(ArticleAuthor.author_id).desc())
-            .limit(count)
+            .order_by(func.count(ArticleAuthor.author_id).desc(), PMCAuthor.lastname, PMCAuthor.firstname)
         )
 
         result: list[dict] = []
@@ -868,7 +1005,7 @@ class EPMCRepo:
                 if country:
                     country_count[country] = country_count.get(country, 0) + 1
             except Exception:
-                # Skip entries that can't be parsed
+                logger.debug("Could not parse country from org_name: %r", org_name)
                 continue
         
         return country_count
@@ -907,16 +1044,57 @@ class EPMCRepo:
 
     def get_unique_citations(self, limit: int = 100, skip: int = 0) -> list[Citation]:
         """
-        Get unique citations by citation_id with the highest ingestion version.
+        Get unique citations by (article_id, citation_id) pair with the highest ingestion version.
         
-        For each unique citation_id, returns only the Citation entity with the highest ingestion version.
-        If a citation row has no ingestion_id, it is included in the results.
+        For each unique (article_id, citation_id) pair, returns only the Citation entity
+        with the highest ingestion version. If a citation row has no ingestion_id, it is
+        included in the results.
         
         Args:
             limit: Maximum number of unique citations to return (default: 100)
             skip: Number of unique citations to skip for pagination (default: 0)
             
         Returns:
-            List of Citation entities, one per unique citation_id with highest version
+            List of Citation entities, one per unique (article_id, citation_id) pair with highest version
         """
-        return self._get_latest_entities_by_column(Citation, Citation.citation_id, limit=limit, skip=skip)
+        return self._get_latest_entities_by_column(Citation, [Citation.article_id, Citation.citation_id], limit=limit, skip=skip)
+    
+    def get_total_citations_count_by_year(self) -> list[tuple[int, int]]:
+        """Return yearly citation counts as (pub_year, year_count)."""
+        return (
+            self.db.query(
+                Citation.pub_year,
+                func.count(Citation.id).label("year_count"),
+            )
+            .filter(Citation.pub_year.isnot(None))
+            .group_by(Citation.pub_year)
+            .order_by(Citation.pub_year.asc())
+            .all()
+        )
+
+    def get_total_cited_by_count(self) -> int:
+        """Sum cited_by_count across all articles in pmc_articles."""
+        total = self.db.query(func.sum(PMCArticle.cited_by_count)).scalar()
+        return int(total) if total else 0
+
+    def count_unique_authors(self) -> int:
+        return self.db.query(
+            func.count(
+                func.distinct(
+                    func.concat(
+                        func.lower(func.trim(PMCAuthor.firstname)),
+                        " ",
+                        func.lower(func.trim(PMCAuthor.lastname)),
+                        " ",
+                        func.lower(func.trim(PMCAuthor.initials))
+                    )
+                )
+            )
+        ).filter(
+            PMCAuthor.firstname.isnot(None),
+            PMCAuthor.lastname.isnot(None),
+            PMCAuthor.initials.isnot(None)
+        ).scalar()
+        
+    def count_articles(self) -> int:
+        return 0;

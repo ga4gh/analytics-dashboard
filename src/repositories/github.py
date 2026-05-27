@@ -1,4 +1,6 @@
 from typing import List, Dict, Any, Optional
+
+from sqlalchemy import text
 from src.models.github import (
     GithubRepo as GhRepoModel,
     GithubEntity as GhEntityModel,
@@ -74,18 +76,19 @@ class GithubRepo:
             return []
     
     def get_all_repos(self) -> List[GhRepoModel]:
-        query = f"SELECT * FROM github_repos"
+        query = "SELECT * FROM github_repos WHERE display_flag = %s"
         with self.db.get_connection() as conn, conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (True,))
             rows = cur.fetchall()
-            if rows and cur.description:
-                columns = [desc[0] for desc in cur.description]
-                repos: List[GhRepoModel] = []
-                for row in rows:
-                    data = dict(zip(columns, row, strict=False))
-                    repos.append(GhRepoModel(**data))
-                return repos
-            return []
+            if not rows or not cur.description:
+                return []
+
+            columns = [desc[0] for desc in cur.description]
+            print("Type checking:",type(dict(zip(columns, rows[0]))['created_on']))  # check the type
+            return [
+                GhRepoModel(**dict(zip(columns, row)))
+                for row in rows
+            ]
 
 class GithubArchivedStats:
     def __init__(self, db: DatabaseConnection, sql_builder: SQLBuilder):

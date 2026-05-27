@@ -1,5 +1,10 @@
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+from pydantic import version
 
 from src.models.entities.pmc_article import PMCArticle
 from src.models.entities.pmc_author import PMCAuthor, PMCAffiliation, ArticleAuthor
@@ -21,7 +26,7 @@ class EPMCClient:
         self.grants_url = "https://www.ebi.ac.uk/europepmc/GristAPI/rest/"
         self.token = ""
 
-    def create_article(self, article_data, record_id, ingestion_id: int, created_by: str = "system") -> PMCArticle:
+    def create_article(self, article_data, record_id, ingestion_id: int, created_by: str = "system", cited_by: int = 0) -> PMCArticle:
         return PMCArticle(
             id=None,  
             record_id=record_id,
@@ -44,7 +49,7 @@ class EPMCClient:
             has_pdf=article_data.get("hasPDF"),
             has_book=article_data.get("hasBook"),
             has_suppl=article_data.get("hasSuppl"),
-            cited_by_count=int(article_data.get("citedByCount") or 0),
+            cited_by_count=int(cited_by),
             has_references=article_data.get("hasReferences"),
             date_of_creation=_parse_dt(article_data.get("dateOfCreation")),
             first_index_date=_parse_dt(article_data.get("firstIndexDate")),
@@ -283,19 +288,25 @@ class EPMCClient:
             ingested_at=datetime.utcnow(), 
             created_by=created_by,
             created_at=datetime.utcnow(),
-            version=version,
+            version=version
+        )
+    
+    def update_ingestion(self, ingestion_id, rows_count: int) -> Ingestion:
+        return Ingestion(
+            id=ingestion_id,
+            rows_count=rows_count
         )
 
     def get_articles(self, keyword):
         json_response = self.get_json(self.base_url, self.get_articles_endpoint(keyword))        
         return json_response
 
-    def get_references(self, id):
-        json_response = self.get_json(self.base_url, self.get_references_endpoint(id))
+    def get_references(self, id, source="MED"):
+        json_response = self.get_json(self.base_url, self.get_references_endpoint(id, source=source))
         return json_response
 
-    def get_citations(self, pmcid):
-        json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid))
+    def get_citations(self, pmcid, source="MED"):
+        json_response = self.get_json(self.base_url, self.get_citations_endpoint(pmcid, source=source))
         return json_response
 
     def get_grants(self, keyword):
@@ -305,29 +316,45 @@ class EPMCClient:
     def get_articles_endpoint(self, keyword):
         return f"search?query={keyword}&format=json&resultType=core"
 
-    def get_citations_endpoint(self, id):
-        return f"MED/{id}/citations?format=json"
+    def get_citations_endpoint(self, id, source="MED"):
+        return f"{source}/{id}/citations?format=json"
 
-    def get_references_endpoint(self, id):
-        return f"MED/{id}/references?format=json"
+    def get_references_endpoint(self, id, source="MED"):
+        return f"{source}/{id}/references?format=json"
 
     def get_grants_endpoint(self, keyword):
         return f"get/query='{keyword}'&resultType=core&format=json"
 
     def get_json(self, base_url: str, endpoint: str, token: Optional[str] = None, per_page: int = 100) -> Dict[str, Any]:
-
         headers = {}
         if token:
             headers["Authorization"] = f"token {token}"
-            
-        params = {"pageSize": per_page, "cursorMark": "*"} 
+
+        is_citations_endpoint = "/citations?" in endpoint
+        page = 1
+
+        # Citations endpoint uses page-based pagination; others use cursor-based pagination.
+        if is_citations_endpoint:
+            params = {"pageSize": per_page, "page": page}
+        else:
+            params = {"pageSize": per_page, "cursorMark": "*"}
+
         items: List[Dict[str, Any]] = []
         url = base_url + endpoint
-        
+
         wrapper_key = "resultList"
         inner_key = "result"
 
+        # Safety: avoid infinite loops by counting iterations
+        max_iters = 1000
+        iters = 0
+        top_hit_count = None  # Capture hitCount from first page
+
         while True:
+            if iters >= max_iters:
+                break
+            iters += 1
+
             resp = requests.get(url, headers=headers, params=params, timeout=30)
             resp.raise_for_status()
 
@@ -336,10 +363,15 @@ class EPMCClient:
             except ValueError:
                 data = xmltodict.parse(resp.text)
 
+            # Capture hitCount from first page only
+            if top_hit_count is None:
+                top_hit_count = data.get("hitCount")
+
+            # Detect which wrapper/inner keys contain list items
             page_items = (data.get("resultList") or {}).get("result")
             if page_items:
                 wrapper_key, inner_key = "resultList", "result"
-            
+
             if not page_items:
                 page_items = (data.get("citationList") or {}).get("citation")
                 if page_items:
@@ -359,18 +391,49 @@ class EPMCClient:
 
             if isinstance(page_items, dict):
                 page_items = [page_items]
-            
+
             items.extend(page_items)
 
+            # Prefer explicit next-page URL if provided
             next_page_url = data.get("nextPageUrl")
-            
             if next_page_url and page_items:
                 url = next_page_url
                 params = None
-            else:
-                break
+                continue
 
-        return {wrapper_key: {inner_key: items}}
+            # Some endpoints return a cursor-like marker for subsequent pages
+            next_cursor = data.get("nextCursorMark") or data.get("nextCursor")
+            if next_cursor:
+                params = {"pageSize": per_page, "cursorMark": next_cursor}
+                continue
+
+            # Fallback: use hitCount pagination when available
+            hit_count = None
+            try:
+                hit_count = int(data.get("hitCount") or (data.get(wrapper_key) or {}).get("hitCount"))
+            except Exception:
+                hit_count = None
+
+            if hit_count is not None:
+                # If we've fetched fewer items than hit_count, advance to next page.
+                if len(items) < hit_count:
+                    if is_citations_endpoint:
+                        page += 1
+                        params = {"pageSize": per_page, "page": page}
+                    else:
+                        # Preserve existing fallback for non-citation endpoints.
+                        next_offset = max(len(items), per_page)
+                        params = {"pageSize": per_page, "offSet": next_offset}
+                    continue
+
+            # No further pages detected
+            break
+
+        # Build return dict with items and hitCount at same level
+        result = {wrapper_key: {inner_key: items}}
+        if top_hit_count is not None:
+            result["hitCount"] = top_hit_count
+        return result
 
 
     def write_df_to_csv(self, df: pd.DataFrame, filename: str) -> Path:
@@ -380,7 +443,7 @@ class EPMCClient:
             path.parent.mkdir(parents=True, exist_ok=True)
 
         df.to_csv(path)
-        print(f"Wrote CSV: {path}")
+        logger.debug("Wrote CSV: %s", path)
         return path
 
 
