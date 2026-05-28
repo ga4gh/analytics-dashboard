@@ -1,7 +1,5 @@
-FROM liquibase/liquibase:4.25.0
+FROM --platform=linux/amd64 liquibase/liquibase:4.25.0
 
 COPY dbchangelog.xml .
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["liquibase", "--changeLogFile=dbchangelog.xml", "update"]
