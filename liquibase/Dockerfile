@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 liquibase/liquibase:4.25.0
+FROM liquibase/liquibase:4.33.0
 
 COPY dbchangelog.xml .
 
