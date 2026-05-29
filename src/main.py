@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from sqlalchemy.engine import make_url
 from urllib.parse import quote
 
-from .clients import pubmed
 from .clients.github import GithubRepoClient
 from .config import constants
 from .config.config import config
@@ -25,10 +24,8 @@ from .repositories.record import Record as RecordRepo
 from .routers.epmc import EPMC as EPMCRouter
 from .routers.github import GithubRepoRouter
 from .routers.health import router as health_router
-from .routers.pubmed import Pubmed as PubmedRouter
 from .routers.pypi import Pypi as PypiRouter
 from .services.github import GithubRepos as GithubReposService
-from .services.pubmed import Pubmed as PubmedService
 from .services.pypi import Pypi as PypiService
 
 logging.basicConfig(level=logging.INFO)
@@ -69,11 +66,6 @@ def main() -> FastAPI:
     author_sql_builder = sqlbuilder.SQLBuilder("authors").allow_fields(author_fields - {"id"})
     author_repo = AuthorRepo(db_conn, author_sql_builder)
 
-    # PubMed setup
-    pubmed_client = pubmed.Pubmed(constants.PUBMED_BASE_URL, config.pubmed_api_key)
-    pubmed_service = PubmedService(author_repo, record_repo, article_repo, pubmed_client)
-    pubmed_router = PubmedRouter(pubmed_service)
-
     # GitHub setup
     gh_api_key = os.getenv("GITHUB_API_KEY", "")
     gh_org = os.getenv("GITHUB_ORG", "ga4gh")  # change via env if needed
@@ -97,7 +89,6 @@ def main() -> FastAPI:
     # --- FastAPI app + router
     app.include_router(gh_router.router)
     app.include_router(pypi_router.router)
-    app.include_router(pubmed_router.router)
     app.include_router(epmc_router.router)
     app.include_router(health_router)
 
