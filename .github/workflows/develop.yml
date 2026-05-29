@@ -6,6 +6,7 @@ name: develop branch workflow
 on:
   push:
     branches:
+      - main
       - develop
       - ci-github-actions # temporary branch for testing, to be removed once workflow is verified
 permissions:
